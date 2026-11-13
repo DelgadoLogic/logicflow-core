@@ -14,11 +14,11 @@ BY THE TERMS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT INSTALL THE SOFTWARE
 1. LICENSE GRANT
    The Company grants you a non-exclusive, non-transferable, revocable license 
    to install and use the Software on one (1) computer for personal or commercial 
-   use, subject to the terms of your subscription tier:
+   use, subject to the terms of your licensing tier:
    
-   - FREE TIER: Basic system profiling and limited scanning (5 scans/day)
-   - PRO ($9.99/mo or $79.99/yr): Full access to all modules
-   - FAMILY ($14.99/mo or $119.99/yr): Up to 5 devices
+   - FREE TIER: Manual diagnostics scanning and system profiling.
+   - COMMUNITY TIER: Full Pro features unlocked in exchange for anonymized system error reporting (telemetry opt-in).
+   - PRO TIER: All 12 modules unlocked, lifetime sovereign updates, offline execution ($29.99 one-time payment per device).
 
 2. RESTRICTIONS
    You may NOT:

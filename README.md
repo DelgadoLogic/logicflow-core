@@ -62,7 +62,7 @@ LogicFlow.Dashboard (WPF UI)
         └── LogicFlow.Native (P/Invoke → Win32)
 ```
 
-**Sovereign update server** (`https://aeon-update-server-y2r5ogip6q-ue.a.run.app`):
+**Sovereign update server** (`https://api.delgadologic.tech`):
 All updates are Ed25519-signed. The agent verifies signatures before applying — no unsigned code ever runs.
 
 ---
@@ -96,9 +96,9 @@ LogicFlow.Agent checks the sovereign update server on launch:
 
 | Edition | Price | Features |
 |---------|-------|---------|
-| **Free** | $0 | Core cleanup, 1 scan/day, basic Guardian |
-| **LogicFlow Pro** | $4.99/mo or $39/yr | Unlimited scans, Sentinel CVE alerts, Lazarus repair, priority updates |
-| **Lifetime** | $29 one-time | Everything, forever |
+| **Free** | $0 | Full diagnostics — see every issue, pay to fix |
+| **Community** | $0 + telemetry | Full Pro access in exchange for anonymous system error reports (telemetry opt-in) |
+| **LogicFlow Pro** | $29.99 one-time | All 12 modules unlocked, lifetime sovereign updates, offline execution |
 
 See [EULA.txt](Docs/EULA.txt) for full license terms.
 
@@ -108,12 +108,14 @@ See [EULA.txt](Docs/EULA.txt) for full license terms.
 
 - [x] All 12 modules implemented (`v0.1.0-foundation`)
 - [x] CI/CD pipeline active (GitHub Actions → sovereign server)
-- [x] Sovereign update server integration
-- [ ] GitHub Release for v0.1.0 with installer alpha
-- [ ] Stripe payment integration
+- [x] Sovereign update server integration (`api.delgadologic.tech`)
+- [x] GitHub Release for v0.1.0 with installer alpha
+- [x] Real-time Dashboard health tiles & visual overhaul
+- [x] Auto-updater consuming sovereign manifest
+- [x] Settings tab wiring & custom toggle styles
+- [ ] Stripe payment integration (pending EIN)
 - [ ] Sentinel CVE feed cross-reference
-- [ ] Real-time Dashboard health tiles
-- [ ] Auto-updater consuming sovereign manifest
+- [ ] Windows 7 SP1 compatibility testing
 
 ---
 

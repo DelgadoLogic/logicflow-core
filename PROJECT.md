@@ -29,6 +29,7 @@ LogicFlow is a modular system utilities suite built on .NET 8. The application i
 | 3 | Go-to-Market Marketing Playbook | Formulate strategy and save to `Docs/marketing_playbook.md` | None | DONE | affe78e7-4b14-416a-8dc0-fee5fde0d3be |
 | 4 | Premium Dashboard Web Prototype | Build premium HTML/CSS/JS interface in `public/redesign/` | None | DONE | 8e92881b-8647-4585-a178-e99d745b2340 |
 | 5 | final_milestone | Final E2E checks and artifact compliance validation | M2, M3, M4 | DONE | e8f1bc7d-a3a2-4e4b-a5fa-41b44a748c32 |
+| 6 | Dashboard UI Overhaul | Refactor WPF columns, resolve background bleed, layout header grids, enrich settings | None | DONE | 7dc512a7-fce7-47de-bbba-e715e683e357 |
 
 ## Interface Contracts
 ### LogicFlow.Guardian ↔ LogicFlow.Dashboard / CLI

@@ -68,12 +68,12 @@ Our monetization model is built on mutual respect. We do not use dark patterns, 
                               | or interactive troubleshooting
                               v
 +------------------------------------------------------------+
-|             LogicFlow Pro / Lifetime (Paid)                |
+|                   LogicFlow Pro (Paid)                     |
 |  - Advanced Automated Task Scheduling (Automatic Cleanup)  |
 |  - Dynamic Background Resource Scheduling (Turbo Mode)     |
 |  - Sector-Level Block Recovery & Carving (Lazarus)        |
 |  - Encrypted, Private Voice Assistant Support (Oracle)     |
-|  - Pricing: $4.99/Month OR $29.00 Lifetime License         |
+|  - Pricing: $29.99 One-time Payment (Lifetime Updates)      |
 +------------------------------------------------------------+
 ```
 
@@ -86,7 +86,7 @@ The Community Edition is a fully capable system maintenance toolkit designed for
 *   **Registry Surgeon:** Manual scanning of registry keys, identifying broken links, and executing repairs (always backed up automatically first).
 *   **Zero Ads / Zero Popups:** No nag screens, no third-party advertisements, and no desktop notification popups.
 
-#### Pro Tier ($4.99/Month) & Lifetime License ($29.00)
+#### Pro Tier ($29.99 One-time Payment)
 The paid tier targets users who want automated system maintenance, advanced data recovery, and interactive system guidance.
 *   **Advanced Task Scheduling:** Enables the automated execution of Guardian cleans, Sentinel network checks, and Registry audits on custom schedules (e.g., daily, weekly at 2 AM, or during idle states).
 *   **Dynamic Turbo Mode Agent:** Runs a lightweight local agent that dynamically adjusts Windows CPU/GPU scheduling priorities, switches power profiles during heavy workloads, and temporarily suspends non-essential background tasks.
@@ -98,7 +98,7 @@ We do not interrupt user workflows with modals or warning screens. Instead, we d
 
 1.  **Contextual Feature Gating:** If a free user attempts to configure an automated cleanup schedule, the UI displays a clean comparison screen. It explains: *"Automated scheduling is a Pro feature. You can continue running scans manually for free, or upgrade to Pro to automate your maintenance."*
 2.  **Factual Upselling:** When showing scan results, we never display a lock icon next to files that the free version can clean. The free version cleans everything it scans. Pro value is centered on automation, resource management, and recovery, not holding basic files hostage.
-3.  **The Checkout Experience:** We support anonymous payment methods, direct credit cards via Stripe, and PayPal. We do not pre-check the "auto-renew" box for monthly plans without clear, large text, and we make canceling subscriptions a one-click process in the app settings, requiring no phone calls or emails.
+3.  **The Checkout Experience:** We support anonymous payment methods, direct credit cards via Stripe, and PayPal. The license is a one-time lifetime activation key ($29.99). Multi-seat purchases can use the `MULTIPC` discount code at checkout. Users can manage or transfer activations directly in their local dashboard settings.
 
 ---
 
@@ -218,5 +218,5 @@ The roll-out of the LogicFlow marketing and monetization playbook is divided int
 
 ### Phase 3: Public Launch (Week 5+)
 *   Publish launch announcements across HN (Show HN) and tech subreddits.
-*   Enable the payment gateways for Pro monthly subscriptions ($4.99/mo) and Lifetime ($29.00) licenses inside the dashboard.
+*   Enable the payment gateways for Pro lifetime ($29.99 one-time) licenses inside the dashboard.
 *   Follow up with pitched tech journalists, sharing user feedback from the beta phase and our technical performance data.

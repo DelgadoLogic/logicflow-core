@@ -2,18 +2,21 @@
 
 ## Architecture
 
-LogicFlow is built as a modular .NET 8 solution with 9 independent projects:
+LogicFlow is built as a modular .NET 8 solution with 12 independent projects:
 
 ```
-LogicFlow.Core       → Shared kernel (logging, WMI events, system profiling)
-LogicFlow.Scraper    → Research intelligence gathering
-LogicFlow.Sentinel   → Security scanning and privacy scrubbing
-LogicFlow.Guardian   → Performance optimization and driver management
-LogicFlow.Lazarus    → Deep-sector data recovery
-LogicFlow.Registry   → Registry analysis and repair
-LogicFlow.Licensing  → RSA license validation and HWID management
-LogicFlow.Commerce   → PayPal subscription engine
-LogicFlow.Dashboard  → WPF glassmorphism UI
+OmniCore.Engine      → AutoUpdateEngine orchestrating sovereign updates and signature checks
+LogicFlow.Dashboard  → Premium WPF glassmorphism UI
+LogicFlow.Guardian   → Performance optimization, junk cleaning, and CPU/GPU scheduling
+LogicFlow.Lazarus    → Deep-sector block data recovery and file carving
+LogicFlow.Sentinel   → Vulnerability scanner, network port auditor, and privacy scrubbing
+OmniLicense          → Offline RSA-2048 license engine binding to HWID
+OmniLicense.Commerce → PayPal Pro transaction fulfillment and webhook bridge
+OmniService          → Windows background service handling updates and diagnostics
+LogicFlow.Native     → Direct Win32 P/Invoke layer for disk/registry and sector operations
+OmniPulse            → Real-time telemetry monitoring via direct WMI and kernel memory APIs
+LogicFlow.Registry   → Registry surgeon with automatic backups and rollback
+LogicFlow.Scraper    → Automated issue harvester tracking KB bugs, CVEs, and event logs
 ```
 
 ## Core Services
@@ -102,20 +105,16 @@ var status = trial.GetStatus();
 
 ### Commerce
 ```csharp
-var plans = PayPalSubscriptionService.GetStandardPlans();
-// Pro Monthly: $9.99, Pro Annual: $79.99
-// Family Monthly: $14.99, Family Annual: $119.99
-
-var service = new PayPalSubscriptionService(httpClient, logger, config);
-var productId = await service.CreateProductAsync();
-var planId = await service.CreatePlanAsync(productId, plans[0]);
+var service = new PayPalFulfillmentService(httpClient, logger, config);
+// Validate a completed PayPal transaction and generate a signed license key
+var licenseKey = await service.FulfillOrderAsync(payPalTransactionId, userHwid);
 ```
 
 ## Pricing Tiers
 
-| Tier | Monthly | Annual | Devices |
-|------|---------|--------|---------|
-| Free | $0 | $0 | 1 |
-| Pro | $9.99 | $79.99 | 1 |
-| Pro Family | $14.99 | $119.99 | 5 |
-| Enterprise | Custom | Custom | Unlimited |
+| Tier | Price | Model | Devices |
+|------|-------|-------|---------|
+| Free | $0 | Diagnostics (Scan system manually, see issues, pay to fix) | 1 |
+| Community | $0 | Telemetry Opt-in (Full Pro access in exchange for anonymous system error reports) | 1 |
+| Pro | $29.99 | One-time Payment (All 12 modules unlocked, lifetime sovereign updates) | 1 |
+| Multi-seat | Bulk | MULTIPC code (Multi-seat discounts applied at checkout) | Custom |

@@ -33,6 +33,9 @@ To ensure a premium, bug-free user experience, we have outlined technical and vi
 - [x] **Custom Glassmorphic styling:** Added `GlassmorphicTheme.xaml` containing gradient border glows, drop shadows, and semi-transparent panels.
 - [x] **Typography Mapping:** Embedded the premium *Outfit* and *Inter* fonts globally into the application resources, ensuring high-end, cohesive rendering across all tabs.
 - [x] **Circular Progress Dials:** Implemented `Wpf.Ui` circular progress controls mapping system health scores.
+- [x] **Header Grid Refactoring:** Converted Sentinel, Guardian, and Toolbox card headers from DockPanels to two-column Grids to eliminate button overlaps.
+- [x] **Settings Tab Overhaul:** Redesigned Settings view with custom toggles, sliders, and utilities panels (General, Scans, Privacy, Licensing).
+- [x] **Elimination of Window Bleed:** Setup `#0A0E1A` background fallback for Windows 10 transparency compatibility.
 - [ ] **Smooth Transition Animations:** Add CSS-style slide-and-fade storyboard transitions when switching between navigation tabs.
 - [ ] **Interactive Hover Visual Effects:** Integrate subtle cursor-based light-reflection animations on card borders using WPF shaders.
 
@@ -48,8 +51,7 @@ LogicFlow operates on a value-driven, high-respect monetization model. We explic
 | :--- | :--- | :--- |
 | **LogicFlow Free** | $0 | Full manual diagnostics and system cleans. Manual registry and network scans. |
 | **LogicFlow Community** | $0 (Opt-in telemetry) | Unlocks full Pro automation and optimization features in exchange for sharing anonymized system error reports (Hive Mesh Network). |
-| **LogicFlow Pro (Monthly)** | $4.99 / Month | Unlocks all automation, scheduling, Lazarus file recovery, and local AI (Oracle) voice assistant features. |
-| **LogicFlow Pro (Lifetime)** | $29.00 One-time | Lifetime license for all Pro features. Includes signed, sovereign updates forever. |
+| **LogicFlow Pro** | $29.99 One-time | Lifetime license for all Pro features (automation, Lazarus deep sector recovery, scheduling, telemetry lock controls). Includes signed, sovereign updates forever. |
 
 ### 2.2 Conversion Optimization Assets
 - **The Competitor Comparison Table:** Positioned on the landing page, detailing LogicFlow's unique advantages (e.g. one-time pricing, zero adware bundling, zero data broker tracking).
