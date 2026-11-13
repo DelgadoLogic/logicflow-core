@@ -55,6 +55,7 @@ public partial class MainWindow : Window
     private SystemInfoEngine.SystemSnapshot? _liveSnapshot;
     private System.Windows.Threading.DispatcherTimer? _monitorTimer;
     private bool _monitorRunning;
+    private bool _isUpdatingProcesses;
 
     // ─── Cached scan results for action handlers ───
     private VulnScanResult? _lastVulnResult;
@@ -70,25 +71,7 @@ public partial class MainWindow : Window
     private System.Windows.Controls.Button[] _navButtons = [];
     private System.Windows.Controls.Button? _activeNavButton;
 
-    // Compatibility fields for replaced XAML controls
-    private readonly TextBlock CpuLabel = new();
-    private readonly TextBlock RamLabel = new();
-    private readonly TextBlock GpuLabel = new();
-    private readonly TextBlock OsLabel = new();
-    private readonly TextBlock DiskHealthLabel = new();
-    private readonly TextBlock DiskHealthSub = new();
-    private readonly TextBlock TurboStatusLabel = new();
-    private readonly TextBlock TurboSub = new();
-    private readonly TextBlock RecoveryStatus = new();
-    private readonly TextBlock RecoverySub = new();
-    private readonly TextBlock RegScore = new();
-    private readonly TextBlock RegSub = new();
-    private readonly TextBlock SecurityScore = new();
-    private readonly TextBlock SecuritySub = new();
-    private readonly TextBlock MemoryLabel = new();
-    private readonly TextBlock MemorySub = new();
-    private readonly TextBlock PerfScore = new();
-    private readonly TextBlock PerfSub = new();
+
 
     // Live dashboard processes and CPU history
     private List<RunningProcessInfo> _lastProcesses = new();
@@ -144,17 +127,12 @@ public partial class MainWindow : Window
         try
         {
             var snapshot = await Task.Run(() => _profiler.CaptureSnapshot());
-            CpuLabel.Text = snapshot.Cpu.Name;
-            RamLabel.Text = $"{snapshot.Memory.TotalPhysicalBytes / (1024.0 * 1024 * 1024):F1} GB ({snapshot.Memory.UsagePercent:F0}% used)";
-            GpuLabel.Text = snapshot.Gpu.Name;
-            OsLabel.Text = $"{snapshot.Os.Caption} (Build {snapshot.Os.BuildNumber})";
 
             HealthHardwareLabel.Text = $"{snapshot.Cpu.Name.Split('@')[0].Trim()} / {snapshot.Memory.TotalPhysicalBytes / (1024.0 * 1024 * 1024):F0}GB RAM";
             HealthOsLabel.Text = snapshot.Os.Caption;
         }
         catch 
         { 
-            CpuLabel.Text = RamLabel.Text = GpuLabel.Text = OsLabel.Text = "N/A"; 
             HealthHardwareLabel.Text = "Loading spec info...";
             HealthOsLabel.Text = "Windows";
         }
@@ -326,6 +304,8 @@ public partial class MainWindow : Window
     private void OnMonitorTick(object? sender, EventArgs e)
     {
         if (_liveSnapshot == null) return;
+        if (_isUpdatingProcesses) return;
+        _isUpdatingProcesses = true;
         
         bool isDashboardVisible = false;
         Dispatcher.Invoke(() => isDashboardVisible = PageDashboard.Visibility == Visibility.Visible);
@@ -339,10 +319,17 @@ public partial class MainWindow : Window
             }
         }).ContinueWith(_ => Dispatcher.Invoke(() =>
         {
-            UpdateMonitorUI();
-            if (isDashboardVisible)
+            try
             {
-                UpdateDashboardLiveMetrics();
+                UpdateMonitorUI();
+                if (isDashboardVisible)
+                {
+                    UpdateDashboardLiveMetrics();
+                }
+            }
+            finally
+            {
+                _isUpdatingProcesses = false;
             }
         }), System.Threading.Tasks.TaskContinuationOptions.None);
     }
@@ -546,11 +533,18 @@ public partial class MainWindow : Window
             var result = await _vulnScanner.ScanAsync();
             _lastVulnResult = result;
             var score = Math.Max(0, 100 - (result.Vulnerabilities.Count * 20) - (result.ExposedServices.Count * 5));
-            SecurityScore.Text = score.ToString();
-            SecurityScore.Foreground = ScoreBrush(score);
-            SecuritySub.Text = $"🛡 {result.Vulnerabilities.Count} vulns, {result.ExposedServices.Count} exposed services";
+            SentinelStatus.Text = $"Sentinel Score: {score}%";
+            SentinelStatus.Foreground = ScoreBrush(score);
+            HealthMonitorLabel.Text = $"🛡 {result.Vulnerabilities.Count} vulns, {result.ExposedServices.Count} exposed services";
+            HealthMonitorLabel.Foreground = ScoreBrush(score);
         }
-        catch (Exception ex) { SecuritySub.Text = $"Error: {ex.Message}"; }
+        catch (Exception ex) 
+        { 
+            SentinelStatus.Text = "Error";
+            SentinelStatus.Foreground = (Brush)FindResource("DangerRedBrush");
+            HealthMonitorLabel.Text = $"Error: {ex.Message}"; 
+            HealthMonitorLabel.Foreground = (Brush)FindResource("DangerRedBrush");
+        }
         finally { HideLoading(); }
     }
 
@@ -566,11 +560,18 @@ public partial class MainWindow : Window
             var badDrivers = drivers.Count(d => d.Status != Guardian.DriverStatus.Healthy);
             var heavyStartup = startup.Count(si => si.ImpactScore >= 7);
             var score = Math.Max(0, 100 - (badDrivers * 3) - (heavyStartup * 5));
-            PerfScore.Text = score.ToString();
-            PerfScore.Foreground = ScoreBrush(score);
-            PerfSub.Text = $"⚡ {badDrivers} driver issues, {heavyStartup} high-impact startup items";
+            DriverStatusLabel.Text = $"Perf Score: {score}%";
+            DriverStatusLabel.Foreground = ScoreBrush(score);
+            HealthMonitorLabel.Text = $"⚡ {badDrivers} driver issues, {heavyStartup} high-impact startup items";
+            HealthMonitorLabel.Foreground = ScoreBrush(score);
         }
-        catch (Exception ex) { PerfSub.Text = $"Error: {ex.Message}"; }
+        catch (Exception ex) 
+        { 
+            DriverStatusLabel.Text = "Error";
+            DriverStatusLabel.Foreground = (Brush)FindResource("DangerRedBrush");
+            HealthMonitorLabel.Text = $"Error: {ex.Message}"; 
+            HealthMonitorLabel.Foreground = (Brush)FindResource("DangerRedBrush");
+        }
         finally { HideLoading(); }
     }
 
@@ -580,9 +581,16 @@ public partial class MainWindow : Window
         try
         {
             var report = await Task.Run(() => _privacyScrubber.Scrub());
-            SecuritySub.Text = $"🧹 Cleared {report.TotalFilesCleared} files ({report.TotalBytesCleared / (1024.0 * 1024):F1} MB)";
+            ScrubStatus.Text = "Privacy Scrub complete";
+            ScrubStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+            ScrubSummaryBar.Visibility = Visibility.Visible;
+            ScrubSummaryText.Text = $"🧹 Cleared {report.TotalFilesCleared} files ({report.TotalBytesCleared / (1024.0 * 1024):F1} MB)";
         }
-        catch (Exception ex) { SecuritySub.Text = $"Scrub error: {ex.Message}"; }
+        catch (Exception ex) 
+        { 
+            ScrubStatus.Text = $"Scrub error: {ex.Message}"; 
+            ScrubStatus.Foreground = (Brush)FindResource("DangerRedBrush");
+        }
         finally { HideLoading(); }
     }
 
@@ -594,11 +602,18 @@ public partial class MainWindow : Window
             var result = await Task.Run(() => _registryAnalyzer.Scan());
             _lastRegResult = result;
             var score = Math.Max(0, 100 - result.TotalIssues * 2);
-            RegScore.Text = score.ToString();
-            RegScore.Foreground = ScoreBrush(score);
-            RegSub.Text = $"🔧 {result.TotalIssues} issues found";
+            RegistryStatus.Text = $"Registry Score: {score}%";
+            RegistryStatus.Foreground = ScoreBrush(score);
+            HealthMonitorLabel.Text = $"🔧 {result.TotalIssues} issues found";
+            HealthMonitorLabel.Foreground = ScoreBrush(score);
         }
-        catch (Exception ex) { RegSub.Text = $"Error: {ex.Message}"; }
+        catch (Exception ex) 
+        { 
+            RegistryStatus.Text = "Error";
+            RegistryStatus.Foreground = (Brush)FindResource("DangerRedBrush");
+            HealthMonitorLabel.Text = $"Error: {ex.Message}"; 
+            HealthMonitorLabel.Foreground = (Brush)FindResource("DangerRedBrush");
+        }
         finally { HideLoading(); }
     }
 
@@ -621,9 +636,17 @@ public partial class MainWindow : Window
             var report = await Task.Run(() => _junkCleaner.Scan());
             _lastJunkReport = report;
             var totalMB = report.Sum(c => c.TotalBytes) / (1024.0 * 1024);
-            SecuritySub.Text = $"🧹 {report.Sum(c => c.FileCount)} junk files ({totalMB:F1} MB)";
+            var totalFiles = report.Sum(c => c.FileCount);
+            JunkStatus.Text = "Junk Clean scan complete";
+            JunkStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+            JunkSummaryBar.Visibility = Visibility.Visible;
+            JunkSummaryText.Text = $"🧹 {totalFiles} junk files ({totalMB:F1} MB)";
         }
-        catch (Exception ex) { SecuritySub.Text = $"Junk scan error: {ex.Message}"; }
+        catch (Exception ex) 
+        { 
+            JunkStatus.Text = $"Junk scan error: {ex.Message}"; 
+            JunkStatus.Foreground = (Brush)FindResource("DangerRedBrush");
+        }
         finally { HideLoading(); }
     }
 
@@ -635,14 +658,21 @@ public partial class MainWindow : Window
             var result = await Task.Run(() => _memoryOptimizer.Optimize());
             var afterPct = result.After.PhysicalUsagePercent;
             var freedMB = result.TotalMemoryFreedBytes / (1024.0 * 1024);
-            MemoryLabel.Text = $"{afterPct:F0}%";
-            MemoryLabel.Foreground = afterPct < 70 ? (Brush)FindResource("SuccessGreenBrush") : (Brush)FindResource("WarningAmberBrush");
-            var areasText = result.IsAdmin
-                ? $"🧠 Freed {freedMB:F0} MB ({result.AreasCleared})"
-                : $"🧠 Freed {freedMB:F0} MB (run as admin for full optimization)";
-            MemorySub.Text = areasText;
+            
+            MemOptStatus.Text = result.IsAdmin
+                ? $"Freed {freedMB:F0} MB ({result.AreasCleared})"
+                : $"Freed {freedMB:F0} MB (run as admin for full optimization)";
+            MemOptStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+            
+            MiniRamBar.Value = afterPct;
+            MiniRamBar.Foreground = MetricBrush(afterPct, Resources);
+            MiniRamText.Text = $"{afterPct:F0}%";
         }
-        catch (Exception ex) { MemorySub.Text = $"Error: {ex.Message}"; }
+        catch (Exception ex) 
+        { 
+            MemOptStatus.Text = $"Error: {ex.Message}"; 
+            MemOptStatus.Foreground = (Brush)FindResource("DangerRedBrush");
+        }
         finally { HideLoading(); }
     }
 
@@ -677,13 +707,16 @@ public partial class MainWindow : Window
             var score = OneClickMaintenance.HealthScore.Calculate(afterPct, diskUsage, junkMB, report.RegistryIssuesFound, report.SafeTweaksApplied, report.HighImpactStartupItems);
 
             // Update Dashboard cards
-            HealthScoreLabel.Text = score.Score.ToString();
+            HealthScoreLabel.Text = $"{score.Score}%";
             HealthScoreLabel.Foreground = ScoreBrush(score.Score);
             HealthScoreSub.Text = $"🏥 Grade: {score.Grade}";
+            HealthProgressRing.Progress = score.Score;
 
-            MemoryLabel.Text = $"{afterPct:F0}%";
-            MemoryLabel.Foreground = afterPct < 70 ? (Brush)FindResource("SuccessGreenBrush") : (Brush)FindResource("WarningAmberBrush");
-            MemorySub.Text = $"🧠 Freed {freedMB:F0} MB";
+            MemOptStatus.Text = $"Freed {freedMB:F0} MB";
+            MemOptStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+            MiniRamBar.Value = afterPct;
+            MiniRamBar.Foreground = MetricBrush(afterPct, Resources);
+            MiniRamText.Text = $"{afterPct:F0}%";
 
             OneClickSummaryBar.Visibility = Visibility.Visible;
             OneClickSummaryText.Text = $"✅ {report.Summary} — Freed {freedMB:F0} MB RAM";
@@ -743,9 +776,10 @@ public partial class MainWindow : Window
 
             // Update dashboard card
             var score = Math.Max(0, 100 - (result.Vulnerabilities.Count * 20) - (result.ExposedServices.Count * 5));
-            SecurityScore.Text = score.ToString();
-            SecurityScore.Foreground = ScoreBrush(score);
-            SecuritySub.Text = $"🛡 {result.Vulnerabilities.Count} vulns, {result.ExposedServices.Count} exposed";
+            SentinelStatus.Text = $"Sentinel Score: {score}%";
+            SentinelStatus.Foreground = ScoreBrush(score);
+            HealthMonitorLabel.Text = $"🛡 {result.Vulnerabilities.Count} vulns, {result.ExposedServices.Count} exposed";
+            HealthMonitorLabel.Foreground = ScoreBrush(score);
         }
         catch (Exception ex) { SentinelStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1081,9 +1115,10 @@ public partial class MainWindow : Window
             // Update dashboard
             var issueCount = outdated + unsigned + missing;
             var score = Math.Max(0, 100 - issueCount * 3);
-            PerfScore.Text = score.ToString();
-            PerfScore.Foreground = ScoreBrush(score);
-            PerfSub.Text = $"⚡ {issueCount} driver issues";
+            DriverStatusLabel.Text = $"Driver Score: {score}%";
+            DriverStatusLabel.Foreground = ScoreBrush(score);
+            HealthMonitorLabel.Text = $"⚡ {issueCount} driver issues";
+            HealthMonitorLabel.Foreground = ScoreBrush(score);
         }
         catch (Exception ex) { DriverStatusLabel.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1252,9 +1287,11 @@ public partial class MainWindow : Window
                 pfUsage > 80 ? "DangerRedBrush" : "BrandCyanBrush"));
 
             // Update Dashboard
-            MemoryLabel.Text = $"{afterPct:F0}%";
-            MemoryLabel.Foreground = afterPct < 70 ? (Brush)FindResource("SuccessGreenBrush") : (Brush)FindResource("WarningAmberBrush");
-            MemorySub.Text = $"🧠 Freed {freedMB:F0} MB ({result.AreasCleared})";
+            MemOptStatus.Text = $"Freed {freedMB:F0} MB ({result.AreasCleared})";
+            MemOptStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+            MiniRamBar.Value = afterPct;
+            MiniRamBar.Foreground = MetricBrush(afterPct, Resources);
+            MiniRamText.Text = $"{afterPct:F0}%";
         }
         catch (Exception ex) { MemOptStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1351,9 +1388,8 @@ public partial class MainWindow : Window
             BtnTurboOff.Visibility = Visibility.Visible;
 
             // Update Global Dashboard Card
-            TurboStatusLabel.Text = "ACTIVE";
-            TurboStatusLabel.Foreground = accentBrush;
-            TurboSub.Text = $"🚀 {name} Overrides Enabled";
+            TurboModeStatus.Text = $"{name.ToUpper()} ACTIVE: {result.ServicesDisabled} services paused, {result.ProcessesKilled} background processes killed. {result.MemoryFreedFormatted} RAM freed.";
+            TurboModeStatus.Foreground = accentBrush;
         }
         catch (Exception ex) { TurboModeStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1390,9 +1426,8 @@ public partial class MainWindow : Window
             BtnTurboServer.Visibility = Visibility.Visible;
 
             // Update Global Dashboard Card
-            TurboStatusLabel.Text = "STANDBY";
-            TurboStatusLabel.Foreground = (Brush)FindResource("TextSecondaryBrush");
-            TurboSub.Text = "🚀 Ready to Activate";
+            TurboModeStatus.Text = "STANDBY: Ready to Activate";
+            TurboModeStatus.Foreground = (Brush)FindResource("TextSecondaryBrush");
         }
         catch (Exception ex) { TurboModeStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1515,10 +1550,7 @@ public partial class MainWindow : Window
                     color));
             }
 
-            // Update Dashboard
-            DiskHealthLabel.Text = critical > 0 ? "⚠" : "✓";
-            DiskHealthLabel.Foreground = critical > 0 ? (Brush)FindResource("DangerRedBrush") : (Brush)FindResource("SuccessGreenBrush");
-            DiskHealthSub.Text = $"💾 {healthy}/{drives.Count} drives healthy";
+
         }
         catch (Exception ex) { SmartDiskStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1664,13 +1696,10 @@ public partial class MainWindow : Window
                     $"{d.TotalSize / (1024.0 * 1024 * 1024):F1} GB total, {d.TotalFreeSpace / (1024.0 * 1024 * 1024):F1} GB free ({pct:F0}% used)",
                     color));
             }
-            RecoveryStatus.Text = "✓";
-            RecoverySub.Text = $"🔄 {drives.Count} drives detected";
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            RecoveryStatus.Text = "!";
-            RecoverySub.Text = $"Error: {ex.Message}";
+            // Updates to RecoveryStatus and RecoverySub removed
         }
     }
 
@@ -1741,9 +1770,10 @@ public partial class MainWindow : Window
 
             // Update dashboard
             var score = Math.Max(0, 100 - result.TotalIssues * 2);
-            RegScore.Text = score.ToString();
-            RegScore.Foreground = ScoreBrush(score);
-            RegSub.Text = $"🔧 {result.TotalIssues} issues";
+            RegistryStatus.Text = $"Registry Score: {score}%";
+            RegistryStatus.Foreground = ScoreBrush(score);
+            HealthMonitorLabel.Text = $"🔧 {result.TotalIssues} issues";
+            HealthMonitorLabel.Foreground = ScoreBrush(score);
         }
         catch (Exception ex) { RegistryStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
