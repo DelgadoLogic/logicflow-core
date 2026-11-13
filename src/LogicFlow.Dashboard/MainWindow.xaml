@@ -6,14 +6,14 @@
     Height="800" Width="1280" MinWidth="1024" MinHeight="700"
     WindowStartupLocation="CenterScreen" WindowStyle="None"
     Icon="pack://application:,,,/Assets/AppIcon.jpg"
-    Background="Transparent" AllowsTransparency="False"
+    Background="{StaticResource BrandDarkBrush}" AllowsTransparency="False"
     FontFamily="{StaticResource AppFont}">
     
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="-1"/>
     </WindowChrome.WindowChrome>
 
-    <Grid>
+    <Grid Background="{StaticResource BrandDarkBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="260"/>
             <ColumnDefinition Width="*"/>
@@ -69,7 +69,7 @@
         </Border>
 
         <!-- ═══ Main Content Area ═══ -->
-        <Grid Grid.Column="1">
+        <Grid Grid.Column="1" Background="{StaticResource BrandDarkBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="50"/>
                 <RowDefinition Height="*"/>
@@ -168,8 +168,8 @@
                         <!-- 2-Column Overview Grid -->
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="7*"/>
-                                <ColumnDefinition Width="5*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- Column 1: Health Summary + Pulse AI Agent -->
@@ -299,7 +299,7 @@
                                                   ItemContainerStyle="{StaticResource DashboardTableRowStyle}">
                                             <ListView.View>
                                                 <GridView>
-                                                    <GridViewColumn Header="Process Name" Width="140">
+                                                    <GridViewColumn Header="Process Name" Width="170">
                                                         <GridViewColumn.HeaderContainerStyle>
                                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
                                                         </GridViewColumn.HeaderContainerStyle>
@@ -309,7 +309,7 @@
                                                             </DataTemplate>
                                                         </GridViewColumn.CellTemplate>
                                                     </GridViewColumn>
-                                                    <GridViewColumn Header="CPU %" Width="70">
+                                                    <GridViewColumn Header="CPU %" Width="80">
                                                         <GridViewColumn.HeaderContainerStyle>
                                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
                                                         </GridViewColumn.HeaderContainerStyle>
@@ -319,7 +319,7 @@
                                                             </DataTemplate>
                                                         </GridViewColumn.CellTemplate>
                                                     </GridViewColumn>
-                                                    <GridViewColumn Header="RAM" Width="85">
+                                                    <GridViewColumn Header="RAM" Width="105">
                                                         <GridViewColumn.HeaderContainerStyle>
                                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
                                                         </GridViewColumn.HeaderContainerStyle>
@@ -329,7 +329,7 @@
                                                             </DataTemplate>
                                                         </GridViewColumn.CellTemplate>
                                                     </GridViewColumn>
-                                                    <GridViewColumn Header="Action" Width="75">
+                                                    <GridViewColumn Header="Action" Width="85">
                                                         <GridViewColumn.HeaderContainerStyle>
                                                             <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
                                                         </GridViewColumn.HeaderContainerStyle>
@@ -359,14 +359,18 @@
                         </StackPanel.RenderTransform>
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="VULNERABILITY SCANNER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="VULNERABILITY SCANNER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🛡 Run Scan" Style="{StaticResource ActionButton}" Click="OnSentinelScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnFixVulns" Content="🔧 Fix All" Style="{StaticResource ActionButton}" Click="OnFixVulnerabilities" 
                                                 Visibility="Collapsed" Background="#E53935" Margin="0,0,8,0"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="SentinelStatus" Text="Click 'Run Scan' to check for vulnerabilities..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <!-- Summary bar -->
                                 <Border x:Name="VulnSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
@@ -382,11 +386,15 @@
 
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="EXPOSED SERVICES" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button x:Name="BtnDisableServices" DockPanel.Dock="Right" Content="🔒 Disable Risky" Style="{StaticResource ActionButton}" 
-                                            Click="OnDisableExposedServices" Visibility="Collapsed" Background="#FF6F00"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="EXPOSED SERVICES" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button x:Name="BtnDisableServices" Grid.Column="1" Content="🔒 Disable Risky" Style="{StaticResource ActionButton}" 
+                                            Click="OnDisableExposedServices" Visibility="Collapsed" Background="#FF6F00" VerticalAlignment="Center"/>
+                                </Grid>
                                 <Border x:Name="ServiceSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Visibility="Collapsed">
                                     <DockPanel>
                                         <TextBlock x:Name="ServiceSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
@@ -400,13 +408,17 @@
 
                         <Border Style="{StaticResource GlassPanel}">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="PRIVACY SCRUBBER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="PRIVACY SCRUBBER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🧹 Quick Scrub" Style="{StaticResource ActionButton}" Click="OnPrivacyScrub" Margin="0,0,8,0"/>
                                         <Button Content="🧹 Deep Scrub" Style="{StaticResource ActionButton}" Click="OnDeepPrivacyScrub" Background="#7C4DFF"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="ScrubStatus" Text="Remove caches, temp files, and telemetry artifacts" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="ScrubSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="ScrubSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SuccessGreenBrush}"/>
@@ -418,14 +430,18 @@
                         <!-- Network Security Scanner (10-Vector) -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,20,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="NETWORK SECURITY SCANNER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="NETWORK SECURITY SCANNER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🌐 Full Network Scan" Style="{StaticResource ActionButton}" Click="OnNetworkScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnRemediateNetwork" Content="🔧 Fix All" Style="{StaticResource ActionButton}" Click="OnRemediateAll"
                                                 Visibility="Collapsed" Background="#E53935"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="NetworkScanStatus" Text="10-vector scan: ports, ARP, DNS, firewall, WiFi, RDP, UPnP, SMBv1, WinRM, shares" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="NetworkSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="NetworkSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -437,10 +453,14 @@
                         <!-- Startup Security Audit -->
                         <Border Style="{StaticResource GlassPanel}">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="STARTUP SECURITY AUDIT" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button DockPanel.Dock="Right" Content="🔍 Audit Startup" Style="{StaticResource ActionButton}" Click="OnStartupAudit"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="STARTUP SECURITY AUDIT" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="🔍 Audit Startup" Style="{StaticResource ActionButton}" Click="OnStartupAudit" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock x:Name="StartupAuditStatus" Text="Scan registry and startup folders for suspicious entries (encoded PowerShell, mshta, certutil)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="StartupAuditSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="StartupAuditSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -460,14 +480,18 @@
                         <!-- Driver Health -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="DRIVER HEALTH" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="DRIVER HEALTH" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="⚡ Scan Drivers" Style="{StaticResource ActionButton}" Click="OnDriverScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnUpdateDrivers" Content="🔄 Update All" Style="{StaticResource ActionButton}" Click="OnUpdateAllDrivers"
                                                 Visibility="Collapsed" Background="#FF6F00"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="DriverStatusLabel" Text="Click scan to evaluate driver health..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <!-- Summary bar with counts -->
                                 <Border x:Name="DriverSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
@@ -484,14 +508,18 @@
                         <!-- Bloatware Scanner -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="BLOATWARE SCANNER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="BLOATWARE SCANNER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🗑 Scan Bloatware" Style="{StaticResource ActionButton}" Click="OnBloatwareScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnRemoveBloat" Content="🗑 Remove All" Style="{StaticResource ActionButton}" Click="OnRemoveAllBloatware"
                                                 Visibility="Collapsed" Background="#E53935"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="BloatStatus" Text="Detect pre-installed bloatware packages..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="BloatSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <DockPanel>
@@ -507,14 +535,18 @@
                         <!-- Startup Optimizer -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="STARTUP OPTIMIZER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="STARTUP OPTIMIZER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🚀 Analyze Startup" Style="{StaticResource ActionButton}" Click="OnStartupScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnDisableStartup" Content="⚡ Disable High-Impact" Style="{StaticResource ActionButton}" Click="OnDisableHighImpactStartup"
                                                 Visibility="Collapsed" Background="#FF6F00"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="StartupStatus" Text="Evaluate startup items by impact score..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="StartupSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <DockPanel>
@@ -530,10 +562,14 @@
                         <!-- SMART Disk Health -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="S.M.A.R.T. DISK HEALTH" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button DockPanel.Dock="Right" Content="💾 Scan Drives" Style="{StaticResource ActionButton}" Click="OnSmartDiskScan"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="S.M.A.R.T. DISK HEALTH" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="💾 Scan Drives" Style="{StaticResource ActionButton}" Click="OnSmartDiskScan" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock x:Name="SmartDiskStatus" Text="Read S.M.A.R.T. attributes from all drives..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="SmartDiskSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="SmartDiskSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -545,14 +581,18 @@
                         <!-- Windows Tweaks -->
                         <Border Style="{StaticResource GlassPanel}">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="WINDOWS OPTIMIZATIONS" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="WINDOWS OPTIMIZATIONS" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🔍 Scan Tweaks" Style="{StaticResource ActionButton}" Click="OnTweakScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnApplyTweaks" Content="⚡ Apply All Safe" Style="{StaticResource ActionButton}" Click="OnApplyAllSafeTweaks"
                                                 Visibility="Collapsed" Background="#00C853"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="TweakStatus" Text="30+ safe Windows optimizations for Privacy, Performance, Gaming, Network..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="TweakSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="TweakSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -598,16 +638,20 @@
                         </StackPanel.RenderTransform>
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="REGISTRY HEALTH SCAN" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="REGISTRY HEALTH SCAN" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🔧 Scan Registry" Style="{StaticResource ActionButton}" Click="OnRegistryScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnFixRegistrySafe" Content="✅ Fix Safe Issues" Style="{StaticResource ActionButton}" Click="OnFixRegistrySafe"
                                                 Visibility="Collapsed" Background="#43A047" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnFixRegistryAll" Content="🔧 Fix All" Style="{StaticResource ActionButton}" Click="OnFixRegistryAll"
                                                 Visibility="Collapsed" Background="#E53935"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="RegistryStatus" Text="Full registry integrity analysis..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <!-- Summary counts bar -->
                                 <Border x:Name="RegSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
@@ -669,16 +713,20 @@
 
                         <!-- Header / Controls -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,16">
-                            <DockPanel>
-                                <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="LIVE RESOURCE MONITOR" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
                                     <TextBlock x:Name="MonitorStatus" Text="⏸ Stopped" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                 </StackPanel>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="BtnStartMonitor" Content="▶ Start" Style="{StaticResource ActionButton}" Click="OnStartMonitor" Margin="0,0,8,0" Background="#00C853"/>
                                     <Button x:Name="BtnStopMonitor" Content="⏹ Stop" Style="{StaticResource ActionButton}" Click="OnStopMonitor" Visibility="Collapsed" Background="#E53935"/>
                                 </StackPanel>
-                            </DockPanel>
+                            </Grid>
                         </Border>
 
                         <!-- CPU + RAM Row -->
@@ -768,10 +816,14 @@
                         <!-- 1-Click Maintenance -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="🎯 1-CLICK MAINTENANCE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button DockPanel.Dock="Right" Content="▶ Run Full Maintenance" Style="{StaticResource ActionButton}" Click="OnOneClickOptimize" Background="#00C853" FontWeight="Bold"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🎯 1-CLICK MAINTENANCE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="▶ Run Full Maintenance" Style="{StaticResource ActionButton}" Click="OnOneClickOptimize" Background="#00C853" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock x:Name="OneClickStatus" Text="Clean junk ─ fix registry ─ optimize startup ─ apply tweaks — all in one click" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="OneClickSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="OneClickSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SuccessGreenBrush}"/>
@@ -783,14 +835,18 @@
                         <!-- Junk File Cleaner -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="🧹 JUNK FILE CLEANER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🧹 JUNK FILE CLEANER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Content="🔍 Scan" Style="{StaticResource ActionButton}" Click="OnJunkScan" Margin="0,0,8,0"/>
                                         <Button x:Name="BtnCleanJunk" Content="🧹 Clean Selected" Style="{StaticResource ActionButton}" Click="OnJunkClean"
                                                 Visibility="Collapsed" Background="#E53935"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 <TextBlock x:Name="JunkStatus" Text="Scan for temp files, browser caches, logs, and more..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="JunkSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="JunkSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -802,11 +858,17 @@
                         <!-- Memory Optimizer -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="🧠 MEMORY OPTIMIZER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button DockPanel.Dock="Right" Content="💿 Virtual Memory" Style="{StaticResource ActionButton}" Click="OnVirtualMemoryOptimize" Background="#00897B" Margin="0,0,8,0"/>
-                                    <Button DockPanel.Dock="Right" Content="🧠 Optimize RAM" Style="{StaticResource ActionButton}" Click="OnMemoryOptimize" Background="#7C4DFF"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🧠 MEMORY OPTIMIZER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="💿 Virtual Memory" Style="{StaticResource ActionButton}" Click="OnVirtualMemoryOptimize" Background="#00897B" Margin="0,0,8,0"/>
+                                        <Button Content="🧠 Optimize RAM" Style="{StaticResource ActionButton}" Click="OnMemoryOptimize" Background="#7C4DFF"/>
+                                    </StackPanel>
+                                </Grid>
                                 <TextBlock x:Name="MemOptStatus" Text="Free up RAM without killing processes..." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="MemOptSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="MemOptSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SuccessGreenBrush}"/>
@@ -819,10 +881,13 @@
                         <Border x:Name="TurboModeContainer" Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <!-- We will animate border color programmatically when mode activates -->
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
                                     <TextBlock Text="🚀 TURBO MODE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                                    <!-- Neon Toggles right-aligned -->
-                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button x:Name="BtnTurboGaming" Content="🎮 GAMING" Style="{StaticResource OutlineButton}" Click="OnTurboGaming" Margin="0,0,8,0" Foreground="{StaticResource TurboGamingOrangeBrush}"  BorderBrush="{StaticResource TurboGamingOrangeBrush}" />
                                         <Button x:Name="BtnTurboWork" Content="💼 WORK" Style="{StaticResource OutlineButton}" Click="OnTurboWork" Margin="0,0,8,0" Foreground="{StaticResource TurboWorkPurpleBrush}" BorderBrush="{StaticResource TurboWorkPurpleBrush}"/>
                                         <Button x:Name="BtnTurboBattery" Content="🔋 BATTERY" Style="{StaticResource OutlineButton}" Click="OnTurboBattery" Margin="0,0,8,0" Foreground="{StaticResource TurboBatteryGreenBrush}" BorderBrush="{StaticResource TurboBatteryGreenBrush}"/>
@@ -830,7 +895,7 @@
                                         <Button x:Name="BtnTurboOff" Content="⏹ REVERT TO NORMAL" Style="{StaticResource ActionButton}" Click="OnTurboDeactivate"
                                                 Visibility="Collapsed" Background="{StaticResource DangerRedBrush}" Foreground="White" FontWeight="Bold"/>
                                     </StackPanel>
-                                </DockPanel>
+                                </Grid>
                                 
                                 <TextBlock x:Name="TurboModeStatus" Text="Forcefully suspend non-essential processes, configure CPU affinity, and alter network routing for raw power." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 
@@ -853,10 +918,14 @@
                         <!-- Disk Space Analyzer -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="📊 DISK SPACE ANALYZER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button DockPanel.Dock="Right" Content="📊 Analyze C:" Style="{StaticResource ActionButton}" Click="OnDiskSpaceAnalyze"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="📊 DISK SPACE ANALYZER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="📊 Analyze C:" Style="{StaticResource ActionButton}" Click="OnDiskSpaceAnalyze" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock x:Name="DiskSpaceStatus" Text="Visual breakdown of disk usage by folder and file type" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="DiskSpaceSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="DiskSpaceSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -868,10 +937,14 @@
                         <!-- Duplicate File Finder -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="🔍 DUPLICATE FILE FINDER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button DockPanel.Dock="Right" Content="🔍 Find Duplicates" Style="{StaticResource ActionButton}" Click="OnDuplicateScan"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🔍 DUPLICATE FILE FINDER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="🔍 Find Duplicates" Style="{StaticResource ActionButton}" Click="OnDuplicateScan" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock x:Name="DuplicateStatus" Text="Scan for duplicate files wasting disk space (SHA-256 hash)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="DuplicateSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="DuplicateSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -883,10 +956,14 @@
                         <!-- File Shredder -->
                         <Border Style="{StaticResource GlassPanel}">
                             <StackPanel>
-                                <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="🗑 FILE SHREDDER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <Button DockPanel.Dock="Right" Content="🗑 Select Files to Shred" Style="{StaticResource ActionButton}" Click="OnFileShredder" Background="#D32F2F"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🗑 FILE SHREDDER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="🗑 Select Files to Shred" Style="{StaticResource ActionButton}" Click="OnFileShredder" Background="#D32F2F" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock x:Name="ShredderStatus" Text="DoD 5220.22-M compliant secure file deletion — unrecoverable" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <Border x:Name="ShredderSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
                                     <TextBlock x:Name="ShredderSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SuccessGreenBrush}"/>
@@ -902,13 +979,63 @@
                         <StackPanel.RenderTransform>
                             <TranslateTransform X="0" Y="0"/>
                         </StackPanel.RenderTransform>
+                        <!-- 1. System Behavior Card -->
+                        <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="SYSTEM BEHAVIOR" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                                <CheckBox x:Name="SettingStartWithWindows" Content="Start LogicFlow with Windows" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingMinimizeToTray" Content="Minimize to system tray on close" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingShowNotifications" Content="Show system tray notifications" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingCheckForUpdates" Content="Check for updates automatically" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 2. Scan Preferences Card -->
+                        <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="SCAN PREFERENCES" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                                <CheckBox x:Name="SettingAutoScanOnStartup" Content="Perform automatic scan on application launch" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingScanDriversOnStartup" Content="Include driver health checks during startup scans" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingScanRegistryOnStartup" Content="Include deep registry scan during startup scans" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingScanSmartOnStartup" Content="Check drive SMART diagnostics automatically on load" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 3. Security & Privacy Card -->
+                        <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="SECURITY &amp; PRIVACY" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox x:Name="SettingLocalAiOnly" Content="Zero-Cloud Local AI Diagnostic Engine" Style="{StaticResource ToggleSwitchStyle}" IsEnabled="False" IsChecked="True" Margin="0" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Background="#1500E5FF" BorderThickness="1" BorderBrush="{StaticResource BrandCyanBrush}" CornerRadius="10" Padding="8,3" VerticalAlignment="Center">
+                                        <TextBlock Text="🔒 High Security Mode Locked" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrandCyanBrush}"/>
+                                    </Border>
+                                </Grid>
+                                <CheckBox x:Name="SettingTelemetryBlocking" Content="Block Windows diagnostic telemetry and data tracking" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingAutoScrubPrivacy" Content="Enable automatic background privacy scrubbing" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                                <CheckBox x:Name="SettingAllowUnsafeRegistry" Content="Allow unsafe registry fixes (recommends backup first)" Style="{StaticResource ToggleSwitchStyle}" Checked="OnSettingToggled" Unchecked="OnSettingToggled"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 4. Diagnostic Storage & License Card -->
                         <Border Style="{StaticResource GlassPanel}">
                             <StackPanel>
-                                <TextBlock Text="APPLICATION SETTINGS" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
-                                <TextBlock Text="LogicFlow v1.0.0 — by DelgadoLogic.Tech" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                                <TextBlock x:Name="HwidLabel" Text="HWID: Loading..." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,16" FontFamily="Consolas"/>
-                                <TextBlock Text="DATA PATHS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                                <TextBlock x:Name="DataPathLabel" Text="..." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" FontFamily="Consolas"/>
+                                <TextBlock Text="DIAGNOSTIC STORAGE &amp; LICENSE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                                <TextBlock Text="LogicFlow System Optimizer v1.0.0 — by DelgadoLogic.Tech" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                                <TextBlock x:Name="HwidLabel" Text="HWID: Loading..." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12" FontFamily="Consolas"/>
+                                <TextBlock Text="DATA STORAGE PATH" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="DataPathLabel" Text="..." FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" FontFamily="Consolas" Margin="0,0,0,16"/>
+                                
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="📋 Copy HWID" Style="{StaticResource OutlineButton}" Margin="0,0,12,8" Click="OnCopyHwidClick" Padding="16,8"/>
+                                    <Button Content="📂 Open Data Folder" Style="{StaticResource OutlineButton}" Margin="0,0,12,8" Click="OnOpenDataFolderClick" Padding="16,8"/>
+                                    <Button Content="🧹 Clean debug logs" Style="{StaticResource OutlineButton}" Margin="0,0,12,8" Click="OnCleanLogsClick" Padding="16,8"/>
+                                    <Button Content="⚠ Reset settings to default" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnResetSettingsClick" Background="#FFD32F2F" Padding="16,8"/>
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>

@@ -49,6 +49,7 @@ public partial class MainWindow : Window
     // ─── Tray + Settings ───
     private TrayIconManager? _trayManager;
     private UserSettings _settings = null!;
+    private bool _isUiLoading;
 
     // ─── Resource Monitor ───
     private readonly SystemInfoEngine _sysInfo = new();
@@ -151,12 +152,15 @@ public partial class MainWindow : Window
         _trayManager = new TrayIconManager(this);
 
         // Load user settings
+        _isUiLoading = true;
         _settings = SettingsManager.Load();
         if (_settings.FirstRunDate == DateTimeOffset.MinValue)
         {
             _settings.FirstRunDate = DateTimeOffset.UtcNow;
             SettingsManager.Save();
         }
+        LoadSettingsToUI();
+        _isUiLoading = false;
 
         // Detect drives for Lazarus
         await RefreshDrives();
@@ -2189,5 +2193,145 @@ public partial class MainWindow : Window
         // Processes list
         ProcessesListView.ItemsSource = null;
         ProcessesListView.ItemsSource = _lastProcesses;
+    }
+
+    private void LoadSettingsToUI()
+    {
+        if (_settings == null) return;
+        SettingStartWithWindows.IsChecked = _settings.StartWithWindows;
+        SettingMinimizeToTray.IsChecked = _settings.MinimizeToTray;
+        SettingShowNotifications.IsChecked = _settings.ShowNotifications;
+        SettingCheckForUpdates.IsChecked = _settings.CheckForUpdatesAutomatically;
+
+        SettingAutoScanOnStartup.IsChecked = _settings.AutoScanOnStartup;
+        SettingScanDriversOnStartup.IsChecked = _settings.ScanDriversOnStartup;
+        SettingScanRegistryOnStartup.IsChecked = _settings.ScanRegistryOnStartup;
+        SettingScanSmartOnStartup.IsChecked = _settings.ScanSmartOnStartup;
+
+        SettingTelemetryBlocking.IsChecked = _settings.EnableTelemetryBlocking;
+        SettingAutoScrubPrivacy.IsChecked = _settings.AutoScrubPrivacy;
+        SettingAllowUnsafeRegistry.IsChecked = _settings.AllowUnsafeRegistryFixes;
+    }
+
+    private void OnSettingToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isUiLoading || _settings == null) return;
+
+        _settings.StartWithWindows = SettingStartWithWindows.IsChecked ?? false;
+        _settings.MinimizeToTray = SettingMinimizeToTray.IsChecked ?? false;
+        _settings.ShowNotifications = SettingShowNotifications.IsChecked ?? false;
+        _settings.CheckForUpdatesAutomatically = SettingCheckForUpdates.IsChecked ?? false;
+
+        _settings.AutoScanOnStartup = SettingAutoScanOnStartup.IsChecked ?? false;
+        _settings.ScanDriversOnStartup = SettingScanDriversOnStartup.IsChecked ?? false;
+        _settings.ScanRegistryOnStartup = SettingScanRegistryOnStartup.IsChecked ?? false;
+        _settings.ScanSmartOnStartup = SettingScanSmartOnStartup.IsChecked ?? false;
+
+        _settings.EnableTelemetryBlocking = SettingTelemetryBlocking.IsChecked ?? false;
+        _settings.AutoScrubPrivacy = SettingAutoScrubPrivacy.IsChecked ?? false;
+        _settings.AllowUnsafeRegistryFixes = SettingAllowUnsafeRegistry.IsChecked ?? false;
+
+        SettingsManager.Save();
+    }
+
+    private void OnCopyHwidClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var hwid = new HwidGenerator().GenerateHwid();
+            System.Windows.Clipboard.SetText(hwid);
+            MessageBox.Show("Hardware ID (HWID) copied to clipboard!", "LogicFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to copy HWID: {ex.Message}", "LogicFlow Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OnOpenDataFolderClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = new LogicFlowConfig().AppDataPath;
+            if (Directory.Exists(path))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true,
+                    Verb = "open"
+                });
+            }
+            else
+            {
+                MessageBox.Show("AppData directory does not exist yet.", "LogicFlow", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to open directory: {ex.Message}", "LogicFlow Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OnCleanLogsClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = new LogicFlowConfig().AppDataPath;
+            if (Directory.Exists(path))
+            {
+                int deletedCount = 0;
+                long bytesFreed = 0;
+                foreach (var file in Directory.GetFiles(path, "*.log", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        var fi = new FileInfo(file);
+                        bytesFreed += fi.Length;
+                        File.Delete(file);
+                        deletedCount++;
+                    }
+                    catch { /* File might be locked */ }
+                }
+                MessageBox.Show($"Cleaned {deletedCount} log files. Freed {bytesFreed / (1024.0 * 1024.0):F2} MB of disk space.", "LogicFlow Logs Cleaned", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("No logs found to clean.", "LogicFlow", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to clean logs: {ex.Message}", "LogicFlow Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OnResetSettingsClick(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            "Are you sure you want to reset all application settings to their default values?\nThis action cannot be undone.",
+            "LogicFlow — Reset Settings",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                _isUiLoading = true;
+                SettingsManager.Reset();
+                _settings = SettingsManager.Load();
+                LoadSettingsToUI();
+                MessageBox.Show("Application settings have been reset to default values.", "Settings Reset", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to reset settings: {ex.Message}", "LogicFlow Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isUiLoading = false;
+            }
+        }
     }
 }
