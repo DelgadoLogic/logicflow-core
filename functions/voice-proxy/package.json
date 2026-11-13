@@ -1,0 +1,20 @@
+{
+  "name": "logicflow-voice-proxy",
+  "version": "1.0.0",
+  "description": "LogicFlow Sovereign Voice Agent Proxy & WebSocket Relay",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node voiceRelay.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^7.10.0",
+    "@google-cloud/functions-framework": "^3.4.0",
+    "@google-cloud/secret-manager": "^5.6.0",
+    "jsonwebtoken": "^9.0.3",
+    "ws": "^8.18.0"
+  }
+}

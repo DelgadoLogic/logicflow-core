@@ -150,10 +150,10 @@ public sealed class ScrapedIssue
     public IssueCategory Category { get; set; }
 }
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<IssueSeverity>))]
 public enum IssueSeverity { Low, Medium, High, Critical }
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<IssueCategory>))]
 public enum IssueCategory { General, Driver, Update, Security, Storage }
 
 [JsonSerializable(typeof(HarvestReport))]

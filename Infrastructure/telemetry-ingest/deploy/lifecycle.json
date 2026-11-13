@@ -1,0 +1,7 @@
+{
+  "rule": [
+    { "action": { "type": "Delete" }, "condition": { "age": 90, "matchesPrefix": ["v1/events/", "v1/stats/"] } },
+    { "action": { "type": "Delete" }, "condition": { "age": 395, "matchesPrefix": ["v1/rollups/"] } },
+    { "action": { "type": "Delete" }, "condition": { "age": 90, "matchesPrefix": ["v1/digests/20"] } }
+  ]
+}

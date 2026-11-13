@@ -26,12 +26,25 @@ public sealed class DelgadoLogicIdentity
 {
     private const string IdentityFileName = "device_identity.json";
 
+    private static readonly object _sync = new();
     private static DelgadoLogicIdentity? _instance;
     private readonly DeviceIdentityRecord _record;
+    private bool _isPersisted;
 
-    private DelgadoLogicIdentity(DeviceIdentityRecord record)
+    /// <summary>
+    /// Optional directory override for isolated unit tests so test runs never touch live %APPDATA%\DelgadoLogic\Shared.
+    /// </summary>
+    public static string? OverrideSharedRootForTesting { get; set; }
+
+    private static string EffectiveSharedRoot =>
+        !string.IsNullOrWhiteSpace(OverrideSharedRootForTesting)
+            ? OverrideSharedRootForTesting!
+            : ProductManifest.SharedAppDataRoot;
+
+    private DelgadoLogicIdentity(DeviceIdentityRecord record, bool isPersisted)
     {
         _record = record;
+        _isPersisted = isPersisted;
     }
 
     // ─── Public Surface ──────────────────────────────────────────────────
@@ -41,6 +54,12 @@ public sealed class DelgadoLogicIdentity
     /// Used for license binding and anonymous telemetry correlation.
     /// </summary>
     public string DeviceId => _record.DeviceId;
+
+    /// <summary>
+    /// Whether this identity record has been persisted to disk.
+    /// False in Free ($0 — Zero Telemetry) ephemeral mode.
+    /// </summary>
+    public bool IsPersisted => _isPersisted;
 
     /// <summary>
     /// When this device identity was first established.
@@ -60,47 +79,127 @@ public sealed class DelgadoLogicIdentity
     // ─── Factory ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Loads or creates the shared device identity. Call once at startup
-    /// before any cross-product features are accessed.
+    /// Loads or creates the shared device identity.
+    /// When <paramref name="allowDiskPersistence"/> is false (Free tier / zero-telemetry mode),
+    /// computes or reads the identity strictly in memory without creating directories or writing device_identity.json.
     /// </summary>
-    public static DelgadoLogicIdentity LoadOrCreate()
+    public static DelgadoLogicIdentity LoadOrCreate(bool allowDiskPersistence = true)
     {
-        if (_instance is not null) return _instance;
-
-        var sharedRoot = ProductManifest.SharedAppDataRoot;
-        Directory.CreateDirectory(sharedRoot);
-
-        var identityFile = Path.Combine(sharedRoot, IdentityFileName);
-
-        DeviceIdentityRecord? record = null;
-
-        if (File.Exists(identityFile))
+        lock (_sync)
         {
+            if (_instance is not null)
+            {
+                if (allowDiskPersistence && !_instance._isPersisted)
+                {
+                    _instance._record.TotalLaunchCount = Math.Max(1, _instance._record.TotalLaunchCount);
+                    _instance.PersistRecord();
+                    _instance._isPersisted = true;
+                }
+                return _instance;
+            }
+
+            var sharedRoot = EffectiveSharedRoot;
+            var identityFile = Path.Combine(sharedRoot, IdentityFileName);
+
+            DeviceIdentityRecord? record = null;
+
+            if (File.Exists(identityFile))
+            {
+                try
+                {
+                    var json = File.ReadAllText(identityFile);
+                    record = JsonSerializer.Deserialize<DeviceIdentityRecord>(json);
+                }
+                catch { /* corrupt file — regenerate below */ }
+            }
+
+            if (record is null)
+            {
+                record = new DeviceIdentityRecord
+                {
+                    DeviceId           = GenerateHwid(),
+                    FirstSeenAt        = DateTimeOffset.UtcNow,
+                    TotalLaunchCount   = 0,
+                    RegisteredProducts = []
+                };
+            }
+
+            if (allowDiskPersistence)
+            {
+                Directory.CreateDirectory(sharedRoot);
+                record.TotalLaunchCount++;
+                File.WriteAllText(identityFile, JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true }));
+            }
+
+            _instance = new DelgadoLogicIdentity(record, isPersisted: allowDiskPersistence && File.Exists(identityFile));
+            return _instance;
+        }
+    }
+
+    /// <summary>
+    /// Deletes %APPDATA%\DelgadoLogic\Shared\device_identity.json (and the Shared folder if empty)
+    /// and clears the cached singleton. Used when switching to Free tier or purging local privacy data.
+    /// </summary>
+    public static bool PurgePersistedIdentity()
+    {
+        lock (_sync)
+        {
+            _instance = null;
             try
             {
-                var json = File.ReadAllText(identityFile);
-                record = JsonSerializer.Deserialize<DeviceIdentityRecord>(json);
+                var sharedRoot = EffectiveSharedRoot;
+                var identityFile = Path.Combine(sharedRoot, IdentityFileName);
+                bool deleted = false;
+                if (File.Exists(identityFile))
+                {
+                    File.Delete(identityFile);
+                    deleted = true;
+                }
+                if (Directory.Exists(sharedRoot) && !Directory.EnumerateFileSystemEntries(sharedRoot).Any())
+                {
+                    Directory.Delete(sharedRoot, recursive: false);
+                }
+
+                // Also purge any legacy %LOCALAPPDATA%\DelgadoLogic\device.json artifact
+                if (string.IsNullOrWhiteSpace(OverrideSharedRootForTesting))
+                {
+                    try
+                    {
+                        var localDelgadoDir = Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                            "DelgadoLogic");
+                        var legacyDeviceJson = Path.Combine(localDelgadoDir, "device.json");
+                        if (File.Exists(legacyDeviceJson))
+                        {
+                            File.Delete(legacyDeviceJson);
+                            deleted = true;
+                        }
+                        if (Directory.Exists(localDelgadoDir) && !Directory.EnumerateFileSystemEntries(localDelgadoDir).Any())
+                        {
+                            Directory.Delete(localDelgadoDir, recursive: false);
+                        }
+                    }
+                    catch { }
+                }
+
+                return deleted;
             }
-            catch { /* corrupt file — regenerate below */ }
-        }
-
-        if (record is null)
-        {
-            record = new DeviceIdentityRecord
+            catch
             {
-                DeviceId     = GenerateHwid(),
-                FirstSeenAt  = DateTimeOffset.UtcNow,
-                TotalLaunchCount = 0,
-                RegisteredProducts = []
-            };
+                return false;
+            }
         }
+    }
 
-        // Increment launch count and persist
-        record.TotalLaunchCount++;
-        File.WriteAllText(identityFile, JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true }));
-
-        _instance = new DelgadoLogicIdentity(record);
-        return _instance;
+    /// <summary>
+    /// Resets the in-memory singleton (used in isolated unit tests).
+    /// </summary>
+    public static void ResetCacheForTesting()
+    {
+        lock (_sync)
+        {
+            _instance = null;
+        }
     }
 
     /// <summary>
@@ -112,7 +211,10 @@ public sealed class DelgadoLogicIdentity
         if (!_record.RegisteredProducts.Contains(key))
         {
             _record.RegisteredProducts.Add(key);
-            PersistRecord();
+            if (_isPersisted)
+            {
+                PersistRecord();
+            }
         }
     }
 
@@ -159,7 +261,7 @@ public sealed class DelgadoLogicIdentity
 
     private void PersistRecord()
     {
-        var sharedRoot = ProductManifest.SharedAppDataRoot;
+        var sharedRoot = EffectiveSharedRoot;
         var identityFile = Path.Combine(sharedRoot, IdentityFileName);
         Directory.CreateDirectory(sharedRoot);
         File.WriteAllText(identityFile, JsonSerializer.Serialize(_record, new JsonSerializerOptions { WriteIndented = true }));

@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Description>LogicFlow Registry Surgeon — dependency-mapped registry analysis, repair, and integrity checking</Description>
-    <Company>DelgadoLogic.Tech</Company>
+    <Company>Delgado Creative Enterprises LLC d/b/a DelgadoLogic</Company>
     <Product>LogicFlow</Product>
     <Version>1.0.0</Version>
   </PropertyGroup>

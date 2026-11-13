@@ -5,8 +5,8 @@
     <AssemblyName>OmniLicense</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Description>OmniLicense — RSA-2048 token verification, HWID fingerprinting, 14-day trial management</Description>
-    <Company>DelgadoLogic.Tech</Company>
+    <Description>OmniLicense - RSA-2048 token verification, HWID fingerprinting, edition policy and price sheet</Description>
+    <Company>Delgado Creative Enterprises LLC d/b/a DelgadoLogic</Company>
     <Product>LogicFlow</Product>
     <Version>1.0.0</Version>
   </PropertyGroup>
@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OmniCore.Engine\OmniCore.Engine.csproj" />
+    <InternalsVisibleTo Include="LogicFlow.Tests" />
   </ItemGroup>
 </Project>

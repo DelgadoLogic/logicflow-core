@@ -6,10 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Description>LogicFlow Voice Agent — Real-time AI voice interface powered by Gemini Live API</Description>
-    <Company>DelgadoLogic.Tech</Company>
+    <Company>Delgado Creative Enterprises LLC d/b/a DelgadoLogic</Company>
     <Product>LogicFlow Voice Agent</Product>
     <Version>1.0.0-preview</Version>
-    <Copyright>© 2026 DelgadoLogic.Tech. All rights reserved.</Copyright>
+    <Copyright>Copyright (c) 2026 Delgado Creative Enterprises LLC d/b/a DelgadoLogic. All rights reserved.</Copyright>
     <!--
       NOTE: This project contains NO API keys.
       All Gemini Live API access is proxied through api.delgadologic.tech
@@ -22,12 +22,13 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <!-- HTTP client for sovereign server session gateway -->
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OmniCore.Engine\OmniCore.Engine.csproj" />
     <ProjectReference Include="..\LogicFlow.Guardian\LogicFlow.Guardian.csproj" />
+    <ProjectReference Include="..\LogicFlow.Sentinel\LogicFlow.Sentinel.csproj" />
     <ProjectReference Include="..\DelgadoLogic.Core\DelgadoLogic.Core.csproj" />
   </ItemGroup>
 </Project>

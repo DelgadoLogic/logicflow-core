@@ -26,33 +26,50 @@ public sealed class AudioPlayback : IDisposable
     private WaveOutEvent? _waveOut;
     private BufferedWaveProvider? _buffer;
 
+    public bool IsAudioDeviceAvailable { get; private set; }
+
     public AudioPlayback(ILogger<AudioPlayback> log)
     {
         _log = log;
         InitAudio();
-        _ = Task.Run(PlaybackLoopAsync);
+        if (IsAudioDeviceAvailable)
+        {
+            _ = Task.Run(PlaybackLoopAsync);
+        }
     }
 
     private void InitAudio()
     {
-        _buffer = new BufferedWaveProvider(
-            new WaveFormat(OutputSampleRate, OutputBits, OutputChannels))
+        try
         {
-            BufferDuration = TimeSpan.FromSeconds(30),
-            DiscardOnBufferOverflow = true,
-        };
+            _buffer = new BufferedWaveProvider(
+                new WaveFormat(OutputSampleRate, OutputBits, OutputChannels))
+            {
+                BufferDuration = TimeSpan.FromSeconds(30),
+                DiscardOnBufferOverflow = true,
+            };
 
-        _waveOut = new WaveOutEvent();
-        _waveOut.Init(_buffer);
-        _waveOut.Play();
+            _waveOut = new WaveOutEvent();
+            _waveOut.Init(_buffer);
+            _waveOut.Play();
+            IsAudioDeviceAvailable = true;
+        }
+        catch (Exception ex)
+        {
+            IsAudioDeviceAvailable = false;
+            _waveOut?.Dispose();
+            _waveOut = null;
+            _log.LogWarning(ex, "[Audio] No audio output device available (e.g. RDP/headless); continuing in text-only mode.");
+        }
     }
 
     /// <summary>
     /// Enqueue raw PCM16 bytes received from the Gemini Live API.
-    /// Thread-safe — can be called from any thread.
+    /// Thread-safe — can be called from any thread. No-op when no output device is present.
     /// </summary>
     public void EnqueueBytes(byte[] pcm16Bytes)
     {
+        if (!IsAudioDeviceAvailable || pcm16Bytes is not { Length: > 0 }) return;
         _audioQueue.Enqueue(pcm16Bytes);
         _signal.Release();
     }

@@ -6,8 +6,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
 using System.Management;
 using System.Net.Http;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -27,10 +30,10 @@ public sealed class DriverDatabase : IDisposable
     private readonly ILogger<DriverDatabase>? _logger;
     private readonly string _apiBase;
 
-    // ── Firebase Cloud Functions base URL ────────────────────────────────
-    // This points to your Cloud Functions deployment, not raw Firestore.
-    // The Cloud Functions handle Firestore lookup + Gemini AI analysis.
-    private const string DefaultApiBase = "https://us-central1-logicflow-guardian.cloudfunctions.net";
+    // ── Sovereign Driver API base URL ────────────────────────────────────
+    public const string DefaultApiBase = "https://api.delgadologic.tech/v1/drivers";
+
+    public string ApiBase => _apiBase;
 
     public DriverDatabase(string apiBase = DefaultApiBase,
                           ILogger<DriverDatabase>? logger = null)
@@ -49,7 +52,7 @@ public sealed class DriverDatabase : IDisposable
     /// Performs a complete 3-tier driver scan:
     ///   1. Enumerate all PnP devices + check Windows Update
     ///   2. Look up top drivers in curated Firestore index
-    ///   3. Correlate crash data with drivers via AI
+    ///   3. Correlate crash data with drivers via Gemma 4 E2B / AI + local pattern matching
     /// Returns a unified DriverScanResult with risk-scored recommendations.
     /// </summary>
     public async Task<DriverScanResult> FullScanAsync(
@@ -61,6 +64,12 @@ public sealed class DriverDatabase : IDisposable
 
         // If caller didn't provide reports, scan via WMI
         var devices = existingReports ?? ScanInstalledDrivers();
+
+        // Automatically collect local Windows Event Log crash digest if caller didn't pass one
+        if (string.IsNullOrWhiteSpace(crashDigestJson))
+        {
+            crashDigestJson = CollectLocalCrashDigestJson();
+        }
 
         // Run all 3 tiers in parallel
         var tier1Task = ScanWindowsUpdateAsync(devices, ct);
@@ -332,86 +341,444 @@ public sealed class DriverDatabase : IDisposable
     // ═══════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Tier 3: Sends device list + crash digest to Cloud Function,
-    /// which uses Vertex AI / Gemini to correlate crashes with specific drivers.
-    /// Returns AI-scored recommendations with severity and confidence.
+    /// Collects recent crash and driver timeout events from the Windows System Event Log:
+    /// Event ID 41 (Kernel-Power), 1001 (BugCheck/WER), 4101 (Display TDR timeout),
+    /// 14 (nvlddmkm), and Microsoft-Windows-WHEA-Logger hardware/driver faults.
+    /// Uses EventLogReader with XPath filtering for fast, targeted retrieval and always returns valid JSON.
     /// </summary>
-    private async Task<List<AiDriverRecommendation>> GetAiRecommendationsAsync(
-        List<DriverReport> devices, string? crashDigestJson, CancellationToken ct)
+    public string CollectLocalCrashDigestJson(int maxEvents = 50, int lookbackDays = 14)
+    {
+        var matches = new List<object>();
+        int clampedDays = Math.Max(1, lookbackDays);
+        int clampedMax = Math.Max(1, maxEvents);
+
+        try
+        {
+            long lookbackMs = (long)TimeSpan.FromDays(clampedDays).TotalMilliseconds;
+            string xpath =
+                $"*[System[(EventID=41 or EventID=1001 or EventID=4101 or EventID=14 or " +
+                $"Provider[@Name='Microsoft-Windows-WHEA-Logger' or @Name='nvlddmkm' or @Name='amdkmdag' or @Name='Display' or " +
+                $"@Name='Microsoft-Windows-Kernel-Power' or @Name='Microsoft-Windows-WER-SystemErrorReporting']) and " +
+                $"TimeCreated[timediff(@SystemTime) <= {lookbackMs}]]]";
+
+            var query = new EventLogQuery("System", PathType.LogName, xpath)
+            {
+                ReverseDirection = true
+            };
+
+            using var reader = new EventLogReader(query);
+            for (EventRecord? record = reader.ReadEvent(); record != null && matches.Count < clampedMax; record = reader.ReadEvent())
+            {
+                using (record)
+                {
+                    int eventId = record.Id;
+                    string source = record.ProviderName ?? "";
+                    string msg = "";
+                    try
+                    {
+                        msg = record.FormatDescription() ?? "";
+                    }
+                    catch
+                    {
+                        if (record.Properties is { Count: > 0 })
+                        {
+                            msg = string.Join(" | ", record.Properties.Select(p => p.Value?.ToString() ?? ""));
+                        }
+                    }
+
+                    matches.Add(new
+                    {
+                        eventId,
+                        source,
+                        level = record.LevelDisplayName ?? record.Level?.ToString() ?? "Error",
+                        timestamp = (record.TimeCreated?.ToUniversalTime() ?? DateTime.UtcNow).ToString("O"),
+                        message = msg.Length > 500 ? msg[..500] : msg
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "EventLogReader XPath query failed; falling back to legacy EventLog enumeration");
+            try
+            {
+                using var eventLog = new EventLog("System");
+                var cutoff = DateTime.Now.AddDays(-clampedDays);
+
+                for (int i = eventLog.Entries.Count - 1; i >= 0 && matches.Count < clampedMax; i--)
+                {
+                    EventLogEntry entry;
+                    try
+                    {
+                        entry = eventLog.Entries[i];
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+
+                    if (entry.TimeGenerated < cutoff)
+                        break;
+
+                    long eventId = entry.InstanceId & 0xFFFF;
+                    string source = entry.Source ?? "";
+                    string msg = entry.Message ?? "";
+
+                    bool isRelevant =
+                        eventId is 41 or 1001 or 4101 or 14 ||
+                        source.Contains("WHEA-Logger", StringComparison.OrdinalIgnoreCase) ||
+                        source.Contains("nvlddmkm", StringComparison.OrdinalIgnoreCase) ||
+                        source.Contains("amdkmdag", StringComparison.OrdinalIgnoreCase) ||
+                        source.Contains("BugCheck", StringComparison.OrdinalIgnoreCase) ||
+                        source.Contains("Kernel-Power", StringComparison.OrdinalIgnoreCase) ||
+                        KnownDriverCrashPatterns.Patterns.Keys.Any(k => msg.Contains(k, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isRelevant)
+                        continue;
+
+                    matches.Add(new
+                    {
+                        eventId,
+                        source,
+                        level = entry.EntryType.ToString(),
+                        timestamp = entry.TimeGenerated.ToUniversalTime().ToString("O"),
+                        message = msg.Length > 500 ? msg[..500] : msg
+                    });
+                }
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger?.LogDebug(fallbackEx, "Fallback EventLog enumeration also failed");
+            }
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            collectedAt = DateTimeOffset.UtcNow,
+            eventCount = matches.Count,
+            events = matches
+        });
+    }
+
+    private static bool IsEmptyCrashDigest(string? crashDigestJson)
+    {
+        if (string.IsNullOrWhiteSpace(crashDigestJson))
+            return true;
+
+        if (crashDigestJson.Contains("\"eventCount\":0", StringComparison.OrdinalIgnoreCase) &&
+            crashDigestJson.Contains("\"events\":[]", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Tier 3: Correlates crash digest data with installed drivers using:
+    /// 1) Local/Hybrid Gemma 4 E2B AI Engine (`GemmaAiEngine.Instance`)
+    /// 2) Local pattern &amp; Event ID matching (`MatchLocalCrashPatterns` — instant, offline fallback)
+    /// 3) Sovereign Cloud API fallback (`/driversScanWithAi`)
+    /// </summary>
+    public async Task<List<AiDriverRecommendation>> GetAiRecommendationsAsync(
+        List<DriverReport> devices, string? crashDigestJson, CancellationToken ct = default)
     {
         var recommendations = new List<AiDriverRecommendation>();
 
-        // ── Step 1: Local pattern matching (instant, no network) ─────────
-        var localMatches = MatchLocalCrashPatterns(devices, crashDigestJson);
-        recommendations.AddRange(localMatches);
+        if (IsEmptyCrashDigest(crashDigestJson))
+            return recommendations;
 
-        // ── Step 2: Cloud AI analysis (if crash data available) ──────────
-        if (!string.IsNullOrEmpty(crashDigestJson))
+        // ── Step 1: Gemma 4 E2B Local Sidecar / Hybrid AI analysis ───────
+        try
         {
-            try
+            var gemma = GemmaAiEngine.Instance;
+            if (gemma.Mode != GemmaExecutionMode.Disabled)
             {
-                var payload = new
+                var deviceSummary = JsonSerializer.Serialize(devices.Take(40).Select(d => new
                 {
-                    devices = devices.Select(d => new
+                    d.HardwareId,
+                    d.DeviceName,
+                    d.DriverVersion,
+                    d.DeviceClass,
+                    d.Manufacturer,
+                    d.DriverDate
+                }));
+
+                var prompt =
+                    "Analyze the following Windows Event Log crash digest and installed PnP drivers. " +
+                    "Identify which specific driver(s) are most likely responsible for the crashes or timeouts.\n\n" +
+                    $"Installed Drivers:\n{deviceSummary}\n\n" +
+                    $"Crash Digest:\n{crashDigestJson}\n\n" +
+                    "Respond with a JSON array of objects with fields: " +
+                    "[{\"DriverName\":\"...\",\"HardwareId\":\"...\",\"Reason\":\"...\",\"Confidence\":0.9,\"Severity\":\"critical\",\"CrashSignatures\":[\"...\"],\"CrashCount\":1}]";
+
+                var chatResp = await gemma.ChatAsync(new GemmaChatRequest
+                {
+                    SystemPrompt = "You are a Windows kernel & driver crash-dump diagnostician powered by Gemma 4 E2B. Output valid JSON array only.",
+                    UserPrompt = prompt,
+                    Temperature = 0.1,
+                    MaxTokens = 512
+                }, ct).ConfigureAwait(false);
+
+                if (chatResp.Success && !string.IsNullOrWhiteSpace(chatResp.Content))
+                {
+                    var text = chatResp.Content.Trim();
+                    int arrStart = text.IndexOf('[');
+                    int arrEnd = text.LastIndexOf(']');
+                    if (arrStart >= 0 && arrEnd > arrStart)
                     {
-                        d.HardwareId, d.DeviceName, d.DriverVersion,
-                        d.DeviceClass, d.Manufacturer, d.DriverDate
-                    }),
-                    crashDigest = crashDigestJson,
-                    systemInfo = GetBasicSystemInfo()
-                };
+                        var jsonSlice = text.Substring(arrStart, arrEnd - arrStart + 1);
+                        var gemmaRecs = JsonSerializer.Deserialize<List<AiDriverRecommendation>>(
+                            jsonSlice,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                var request = new HttpRequestMessage(HttpMethod.Post, $"{_apiBase}/driversScanWithAi")
-                {
-                    Content = new StringContent(
-                        JsonSerializer.Serialize(payload),
-                        Encoding.UTF8, "application/json")
-                };
-
-                var response = await _http.SendAsync(request, ct);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var body = await response.Content.ReadAsStringAsync(ct);
-                    var aiResults = JsonSerializer.Deserialize<List<AiDriverRecommendation>>(body,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-
-                    // Merge AI results, avoiding duplicates with local matches
-                    foreach (var ai in aiResults)
-                    {
-                        if (!recommendations.Any(r => r.HardwareId == ai.HardwareId))
-                            recommendations.Add(ai);
+                        if (gemmaRecs is { Count: > 0 })
+                        {
+                            foreach (var rec in gemmaRecs)
+                            {
+                                if (!recommendations.Any(r =>
+                                    (!string.IsNullOrEmpty(rec.HardwareId) && string.Equals(r.HardwareId, rec.HardwareId, StringComparison.OrdinalIgnoreCase)) ||
+                                    string.Equals(r.DriverName, rec.DriverName, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    recommendations.Add(rec);
+                                }
+                            }
+                            _logger?.LogInformation("Tier 3 (Gemma 4 E2B): {Count} driver crash correlations generated", gemmaRecs.Count);
+                        }
                     }
-
-                    _logger?.LogInformation("Tier 3 (AI): {Count} recommendations from Gemini", aiResults.Count);
                 }
             }
-            catch (Exception ex)
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Gemma 4 E2B driver crash analysis fell back to local/cloud");
+        }
+
+        // ── Step 2: Local deterministic pattern matching (offline fallback & enrichment) ──
+        var localMatches = MatchLocalCrashPatterns(devices, crashDigestJson);
+        foreach (var localRec in localMatches)
+        {
+            if (!recommendations.Any(r =>
+                (!string.IsNullOrEmpty(localRec.HardwareId) && string.Equals(r.HardwareId, localRec.HardwareId, StringComparison.OrdinalIgnoreCase)) ||
+                string.Equals(r.DriverName, localRec.DriverName, StringComparison.OrdinalIgnoreCase)))
             {
-                _logger?.LogDebug(ex, "Tier 3 (AI) analysis failed — using local patterns only");
+                recommendations.Add(localRec);
             }
+        }
+
+        if (recommendations.Count > 0)
+            return recommendations;
+
+        // ── Step 3: Sovereign Cloud AI analysis fallback ─────────────────
+        try
+        {
+            var payload = new
+            {
+                devices = devices.Take(150).Select(d => new
+                {
+                    d.HardwareId, d.DeviceName, d.DriverVersion,
+                    d.DeviceClass, d.Manufacturer, d.DriverDate
+                }),
+                crashDigest = crashDigestJson,
+                systemInfo = GetBasicSystemInfo()
+            };
+
+            var bodyJson = JsonSerializer.Serialize(payload);
+            var bodyBytes = Encoding.UTF8.GetBytes(bodyJson);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{_apiBase}/driversScanWithAi")
+            {
+                Content = new ByteArrayContent(bodyBytes)
+            };
+            request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json")
+            {
+                CharSet = "utf-8"
+            };
+
+            if (!TryAttachCloudAuthHeaders(request, bodyBytes))
+            {
+                _logger?.LogDebug("Tier 3 (Cloud AI) skipped — no active license token or telemetry consent");
+                return recommendations;
+            }
+
+            var response = await _http.SendAsync(request, ct);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(ct);
+                var aiResults = JsonSerializer.Deserialize<List<AiDriverRecommendation>>(body,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+
+                foreach (var ai in aiResults)
+                {
+                    if (!recommendations.Any(r => r.HardwareId == ai.HardwareId))
+                        recommendations.Add(ai);
+                }
+
+                _logger?.LogInformation("Tier 3 (Cloud AI): {Count} recommendations", aiResults.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Tier 3 (Cloud AI) analysis failed — using local patterns only");
         }
 
         return recommendations;
     }
 
+    internal static bool TryAttachCloudAuthHeaders(
+        HttpRequestMessage request,
+        byte[] bodyBytes,
+        string? appDataRootOverride = null,
+        Func<string, string, object?>? registryReaderOverride = null)
+    {
+        var regReader = registryReaderOverride ?? ReadRegistryPolicyValue;
+        if (IsTelemetryDisabledByPolicy(regReader))
+            return false;
+
+        var appDataRoot = !string.IsNullOrWhiteSpace(appDataRootOverride)
+            ? appDataRootOverride
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LogicFlow");
+
+        // 1. Prefer locally activated signed Pro/Community license token
+        try
+        {
+            var licensePath = Path.Combine(appDataRoot, "License", "license_token.json");
+            if (File.Exists(licensePath))
+            {
+                var rawLicense = File.ReadAllText(licensePath);
+                using var doc = JsonDocument.Parse(rawLicense);
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.Object &&
+                    root.TryGetProperty("Payload", out var p) && !string.IsNullOrWhiteSpace(p.GetString()) &&
+                    root.TryGetProperty("Signature", out var s) && !string.IsNullOrWhiteSpace(s.GetString()))
+                {
+                    var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(rawLicense));
+                    request.Headers.TryAddWithoutValidation("X-LF-License-Token", encoded);
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+            // Fall through to consent-bound Pulse HMAC check
+        }
+
+        // 2. Fallback: active Standard/Extended Pulse telemetry consent + current PolicyVersion + no KillUntil + HMAC signature
+        try
+        {
+            var consentPath = Path.Combine(appDataRoot, "Pulse", "consent.json");
+            if (File.Exists(consentPath))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(consentPath));
+                var root = doc.RootElement;
+                var decided = root.TryGetProperty("DecidedAt", out var dProp) && dProp.ValueKind == JsonValueKind.String;
+                var eulaOk = root.TryGetProperty("EulaAcceptedAt", out var eProp) && eProp.ValueKind == JsonValueKind.String;
+                var policyVer = root.TryGetProperty("PolicyVersion", out var pvProp) && pvProp.ValueKind == JsonValueKind.String
+                    ? pvProp.GetString()
+                    : null;
+                var killActive = root.TryGetProperty("KillUntil", out var kProp) &&
+                    kProp.ValueKind == JsonValueKind.String &&
+                    DateTimeOffset.TryParse(kProp.GetString(), out var killUntil) &&
+                    killUntil > DateTimeOffset.UtcNow;
+                var level = root.TryGetProperty("Level", out var lProp) && lProp.ValueKind == JsonValueKind.String
+                    ? lProp.GetString()?.Trim().ToLowerInvariant()
+                    : null;
+                var installId = root.TryGetProperty("InstallId", out var idProp) && idProp.ValueKind == JsonValueKind.String
+                    ? idProp.GetString()?.Trim()
+                    : null;
+
+                if (decided && eulaOk && !killActive &&
+                    string.Equals(policyVer, "2026-10-1", StringComparison.Ordinal) &&
+                    (level == "standard" || level == "extended") &&
+                    !string.IsNullOrWhiteSpace(installId) &&
+                    Regex.IsMatch(installId, "^[0-9a-fA-F]{32}$"))
+                {
+                    var ingestKey = AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a =>
+                        {
+                            try { return a.GetCustomAttributes<AssemblyMetadataAttribute>(); }
+                            catch { return Array.Empty<AssemblyMetadataAttribute>(); }
+                        })
+                        .FirstOrDefault(a => a.Key == "LogicFlowIngestKey")?.Value;
+
+                    if (!string.IsNullOrWhiteSpace(ingestKey))
+                    {
+                        var sig = Convert.ToHexString(
+                            HMACSHA256.HashData(Encoding.UTF8.GetBytes(ingestKey), bodyBytes)).ToLowerInvariant();
+                        request.Headers.TryAddWithoutValidation("X-LF-Install-Id", installId.ToLowerInvariant());
+                        request.Headers.TryAddWithoutValidation("X-LF-Consent", level);
+                        request.Headers.TryAddWithoutValidation("X-LF-Sig", sig);
+                        return true;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fail closed: no network call without authentication/consent
+        }
+
+        return false;
+    }
+
+    private static bool IsTelemetryDisabledByPolicy(Func<string, string, object?> regReader)
+    {
+        foreach (var keyPath in new[] { @"HKLM\SOFTWARE\Policies\DelgadoLogic\LogicFlow", @"HKCU\SOFTWARE\Policies\DelgadoLogic\LogicFlow" })
+        {
+            if (regReader(keyPath, "TelemetryDisabled") is int v && v == 1)
+                return true;
+        }
+        foreach (var keyPath in new[] { @"HKLM\SOFTWARE\DelgadoLogic\LogicFlow", @"HKCU\SOFTWARE\DelgadoLogic\LogicFlow" })
+        {
+            if (regReader(keyPath, "TelemetryEnabled") is int v && v == 0)
+                return true;
+        }
+        return false;
+    }
+
+    private static object? ReadRegistryPolicyValue(string keyPath, string valueName)
+    {
+        try
+        {
+            if (keyPath.StartsWith(@"HKLM\", StringComparison.OrdinalIgnoreCase))
+            {
+                using var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(keyPath.Substring(5), writable: false);
+                return k?.GetValue(valueName);
+            }
+            if (keyPath.StartsWith(@"HKCU\", StringComparison.OrdinalIgnoreCase))
+            {
+                using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath.Substring(5), writable: false);
+                return k?.GetValue(valueName);
+            }
+        }
+        catch
+        {
+            // Ignore unreadable registry policy keys
+        }
+        return null;
+    }
+
     /// <summary>
-    /// Matches crash digest data against known crash-to-driver patterns locally.
-    /// This runs instantly without network, providing fast results.
+    /// Matches crash digest data against known crash-to-driver patterns and Windows Event IDs locally.
+    /// Supports Event IDs 41 (Kernel-Power), 1001 (BugCheck/WER), 4101 (Display TDR), 14 (nvlddmkm),
+    /// and Microsoft-Windows-WHEA-Logger hardware/bus errors.
     /// </summary>
-    private List<AiDriverRecommendation> MatchLocalCrashPatterns(
+    public List<AiDriverRecommendation> MatchLocalCrashPatterns(
         List<DriverReport> devices, string? crashDigestJson)
     {
         var recommendations = new List<AiDriverRecommendation>();
 
-        if (string.IsNullOrEmpty(crashDigestJson)) return recommendations;
+        if (IsEmptyCrashDigest(crashDigestJson) || string.IsNullOrEmpty(crashDigestJson))
+            return recommendations;
 
         foreach (var (moduleName, pattern) in KnownDriverCrashPatterns.Patterns)
         {
             if (!crashDigestJson.Contains(moduleName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            // Find the matching device
             var matchedDevice = devices.FirstOrDefault(d =>
                 d.DeviceClass?.Equals(pattern.DeviceCategory, StringComparison.OrdinalIgnoreCase) == true ||
                 d.DeviceName?.Contains(pattern.DriverName.Split(' ')[0], StringComparison.OrdinalIgnoreCase) == true);
@@ -421,10 +788,106 @@ public sealed class DriverDatabase : IDisposable
                 DriverName = matchedDevice?.DeviceName ?? pattern.DriverName,
                 HardwareId = matchedDevice?.HardwareId ?? "",
                 Reason = pattern.Description,
-                Confidence = 0.85, // High confidence for known patterns
+                Confidence = 0.85,
                 Severity = "critical",
                 CrashSignatures = new List<string> { moduleName },
                 CrashCount = CountOccurrences(crashDigestJson, moduleName)
+            });
+        }
+
+        // Match Event ID 4101 (Display TDR timeout) and Event ID 14 (nvlddmkm)
+        if ((crashDigestJson.Contains("4101", StringComparison.OrdinalIgnoreCase) ||
+             crashDigestJson.Contains("Display driver", StringComparison.OrdinalIgnoreCase) ||
+             crashDigestJson.Contains("nvlddmkm", StringComparison.OrdinalIgnoreCase) ||
+             Regex.IsMatch(crashDigestJson, @"\b(?:eventId""?\s*:\s*|EventID\s*[:=]?\s*)14\b", RegexOptions.IgnoreCase)) &&
+            !recommendations.Any(r => r.CrashSignatures.Contains("EventID:4101") || r.CrashSignatures.Contains("EventID:14")))
+        {
+            var gpuDevice = devices.FirstOrDefault(d =>
+                string.Equals(d.DeviceClass, "Display", StringComparison.OrdinalIgnoreCase) ||
+                d.DeviceName.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) ||
+                d.DeviceName.Contains("Radeon", StringComparison.OrdinalIgnoreCase) ||
+                d.DeviceName.Contains("Arc", StringComparison.OrdinalIgnoreCase));
+
+            if (gpuDevice == null || !recommendations.Any(r => !string.IsNullOrEmpty(gpuDevice.HardwareId) && r.HardwareId == gpuDevice.HardwareId))
+            {
+                bool isEvent14 = crashDigestJson.Contains("nvlddmkm", StringComparison.OrdinalIgnoreCase) ||
+                                 Regex.IsMatch(crashDigestJson, @"\b(?:eventId""?\s*:\s*|EventID\s*[:=]?\s*)14\b", RegexOptions.IgnoreCase);
+                string sig = isEvent14 && !crashDigestJson.Contains("4101", StringComparison.OrdinalIgnoreCase)
+                    ? "EventID:14"
+                    : "EventID:4101";
+
+                recommendations.Add(new AiDriverRecommendation
+                {
+                    DriverName = gpuDevice?.DeviceName ?? (isEvent14 ? "NVIDIA Display Driver (nvlddmkm)" : "Graphics Display Driver (TDR)"),
+                    HardwareId = gpuDevice?.HardwareId ?? "",
+                    Reason = "Windows Event Log recorded Display Driver Timeout / GPU Kernel Reset (Event 4101 / 14). Clean installation or update of the graphics driver is recommended.",
+                    Confidence = 0.82,
+                    Severity = "high",
+                    CrashSignatures = new List<string> { sig },
+                    CrashCount = Math.Max(1, CountOccurrences(crashDigestJson, "4101") + CountOccurrences(crashDigestJson, "nvlddmkm"))
+                });
+            }
+        }
+
+        // Match Event ID 1001 (BugCheck / Windows Error Reporting BSOD reboot)
+        if ((crashDigestJson.Contains("1001", StringComparison.OrdinalIgnoreCase) ||
+             crashDigestJson.Contains("BugCheck", StringComparison.OrdinalIgnoreCase) ||
+             crashDigestJson.Contains("WER-SystemErrorReporting", StringComparison.OrdinalIgnoreCase)) &&
+            !recommendations.Any(r => r.CrashSignatures.Contains("EventID:1001")))
+        {
+            var targetDevice = devices.FirstOrDefault(d =>
+                string.Equals(d.DeviceClass, "Display", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(d.DeviceClass, "System", StringComparison.OrdinalIgnoreCase)) ?? devices.FirstOrDefault();
+
+            recommendations.Add(new AiDriverRecommendation
+            {
+                DriverName = targetDevice?.DeviceName ?? "Kernel Mode Driver / BugCheck Source",
+                HardwareId = targetDevice?.HardwareId ?? "",
+                Reason = "Windows Error Reporting recorded a system BugCheck (Event ID 1001 BSOD). Updating GPU, chipset, and storage drivers is recommended.",
+                Confidence = 0.76,
+                Severity = "critical",
+                CrashSignatures = new List<string> { "EventID:1001" },
+                CrashCount = Math.Max(1, CountOccurrences(crashDigestJson, "1001") + CountOccurrences(crashDigestJson, "BugCheck"))
+            });
+        }
+
+        // Match Event ID 41 (Kernel-Power unexpected shutdown / power loss)
+        if ((crashDigestJson.Contains("Kernel-Power", StringComparison.OrdinalIgnoreCase) ||
+             Regex.IsMatch(crashDigestJson, @"\b(?:eventId""?\s*:\s*|EventID\s*[:=]?\s*)41\b", RegexOptions.IgnoreCase)) &&
+            !recommendations.Any(r => r.CrashSignatures.Contains("EventID:41")))
+        {
+            var sysDevice = devices.FirstOrDefault(d =>
+                string.Equals(d.DeviceClass, "System", StringComparison.OrdinalIgnoreCase)) ?? devices.FirstOrDefault();
+
+            recommendations.Add(new AiDriverRecommendation
+            {
+                DriverName = sysDevice?.DeviceName ?? "System Power / Chipset / ACPI Driver",
+                HardwareId = sysDevice?.HardwareId ?? "",
+                Reason = "Kernel-Power Event ID 41 detected (unexpected power loss or hard thermal/kernel reset). Check PSU stability, BIOS firmware, and chipset power drivers.",
+                Confidence = 0.74,
+                Severity = "high",
+                CrashSignatures = new List<string> { "EventID:41" },
+                CrashCount = Math.Max(1, CountOccurrences(crashDigestJson, "Kernel-Power") + CountOccurrences(crashDigestJson, "41"))
+            });
+        }
+
+        // Match WHEA-Logger hardware/bus errors
+        if (crashDigestJson.Contains("WHEA-Logger", StringComparison.OrdinalIgnoreCase) &&
+            !recommendations.Any(r => r.CrashSignatures.Contains("WHEA-Logger")))
+        {
+            var sysDevice = devices.FirstOrDefault(d =>
+                string.Equals(d.DeviceClass, "System", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(d.DeviceClass, "Display", StringComparison.OrdinalIgnoreCase)) ?? devices.FirstOrDefault();
+
+            recommendations.Add(new AiDriverRecommendation
+            {
+                DriverName = sysDevice?.DeviceName ?? "Chipset / PCIe Root Complex Driver",
+                HardwareId = sysDevice?.HardwareId ?? "",
+                Reason = "Windows Hardware Error Architecture (WHEA-Logger) events detected. Update chipset, NVMe storage, and GPU drivers.",
+                Confidence = 0.78,
+                Severity = "high",
+                CrashSignatures = new List<string> { "WHEA-Logger" },
+                CrashCount = CountOccurrences(crashDigestJson, "WHEA-Logger")
             });
         }
 
@@ -918,6 +1381,7 @@ public sealed record DriverUpdateInfo
     public string CurrentVersion { get; init; } = "";
     public string LatestVersion { get; init; } = "";
     public string DownloadUrl { get; init; } = "";
+    public string? ExpectedSha256 { get; init; }
     public long SizeBytes { get; init; }
     public bool IsWhqlCertified { get; init; }
     public string Manufacturer { get; init; } = "";

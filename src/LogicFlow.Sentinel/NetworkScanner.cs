@@ -95,96 +95,118 @@ public sealed class NetworkScanner
     private List<OpenPortFinding> ScanOpenPorts(CancellationToken ct)
     {
         var findings = new List<OpenPortFinding>();
-        foreach (var (port, service, risk) in RiskyPorts)
+        var findingsLock = new object();
+        System.Threading.Tasks.Parallel.ForEach(RiskyPorts, item =>
         {
-            if (ct.IsCancellationRequested) break;
+            if (ct.IsCancellationRequested) return;
+            var (port, service, risk) = item;
             try
             {
                 using var client = new TcpClient();
                 var result = client.BeginConnect(IPAddress.Loopback, port, null, null);
-                bool connected = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(200));
+                bool connected = result.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(150));
                 if (connected && client.Connected)
                 {
-                    findings.Add(new OpenPortFinding
+                    lock (findingsLock)
                     {
-                        Port = port,
-                        Service = service,
-                        Risk = risk,
-                        Severity = port is 3389 or 445 or 23 or 139
-                            ? FindingSeverity.Critical
-                            : FindingSeverity.High
-                    });
+                        findings.Add(new OpenPortFinding
+                        {
+                            Port = port,
+                            Service = service,
+                            Risk = risk,
+                            Severity = port is 3389 or 445 or 23 or 139
+                                ? FindingSeverity.Critical
+                                : FindingSeverity.High
+                        });
+                    }
                     _logger.LogWarning("[Sentinel] ⚠ Open port detected: {Port} ({Service})", port, service);
                 }
                 client.Close();
             }
             catch { /* Port closed or filtered — safe */ }
-        }
-        return findings;
+        });
+        return findings.OrderBy(f => f.Port).ToList();
     }
 
     // ═══════════════════════════════════════════════════════════════════
     // VECTOR 2: ARP Device Discovery — finds all devices on local network
     // ═══════════════════════════════════════════════════════════════════
     [DllImport("iphlpapi.dll", ExactSpelling = true)]
-    private static extern int SendARP(int destIp, int srcIp, byte[] macAddr, ref int physAddrLen);
+    private static extern int GetIpNetTable(IntPtr pIpNetTable, ref int pdwSize, bool bOrder);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MIB_IPNETROW
+    {
+        public int dwIndex;
+        public int dwPhysAddrLen;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        public byte[] bPhysAddr;
+        public int dwAddr;
+        public int dwType; // 1 = Other, 2 = Invalid, 3 = Dynamic, 4 = Static
+    }
 
     private List<ArpDevice> DiscoverArpDevices()
     {
         var devices = new List<ArpDevice>();
         try
         {
-            // Get local network interfaces
+            var indexToName = new Dictionary<int, string>();
             foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
             {
                 if (nic.OperationalStatus != OperationalStatus.Up) continue;
                 if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
                     or NetworkInterfaceType.Tunnel) continue;
-
-                var ipProps = nic.GetIPProperties();
-                foreach (var unicast in ipProps.UnicastAddresses)
+                try
                 {
-                    if (unicast.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                    var ipv4Props = nic.GetIPProperties().GetIPv4Properties();
+                    if (ipv4Props != null)
+                        indexToName[ipv4Props.Index] = nic.Name;
+                }
+                catch { }
+            }
 
-                    var localIp = unicast.Address;
-                    var mask = unicast.IPv4Mask;
-
-                    // Scan first 254 addresses in subnet
-                    var baseBytes = localIp.GetAddressBytes();
-                    var maskBytes = mask.GetAddressBytes();
-
-                    var devicesLock = new object();
-                    System.Threading.Tasks.Parallel.For(1, 255, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 64 }, i =>
+            int bytesNeeded = 0;
+            GetIpNetTable(IntPtr.Zero, ref bytesNeeded, false);
+            if (bytesNeeded > 0)
+            {
+                IntPtr buffer = Marshal.AllocCoTaskMem(bytesNeeded);
+                try
+                {
+                    if (GetIpNetTable(buffer, ref bytesNeeded, false) == 0)
                     {
-                        var targetBytes = new byte[4];
-                        for (int j = 0; j < 4; j++)
-                            targetBytes[j] = (byte)((baseBytes[j] & maskBytes[j]) | (~maskBytes[j] & (j == 3 ? i : 0)));
+                        int entries = Marshal.ReadInt32(buffer);
+                        IntPtr current = IntPtr.Add(buffer, sizeof(int));
+                        int rowSize = Marshal.SizeOf<MIB_IPNETROW>();
 
-                        var targetIp = new IPAddress(targetBytes);
-                        if (targetIp.Equals(localIp)) return;
-
-                        try
+                        for (int i = 0; i < entries; i++)
                         {
-                            var mac = new byte[6];
-                            int macLen = mac.Length;
-                            int ipInt = BitConverter.ToInt32(targetBytes, 0);
+                            var row = Marshal.PtrToStructure<MIB_IPNETROW>(current);
+                            current = IntPtr.Add(current, rowSize);
 
-                            if (SendARP(ipInt, 0, mac, ref macLen) == 0)
+                            // Only include valid Dynamic (3) or Static (4) entries on active non-loopback NICs
+                            if (row.dwType is not (3 or 4) || row.dwPhysAddrLen <= 0) continue;
+                            if (!indexToName.TryGetValue(row.dwIndex, out var nicName)) continue;
+
+                            var ipBytes = BitConverter.GetBytes(row.dwAddr);
+                            // Skip multicast (224.0.0.0/4) and broadcast (255.255.255.255 or .255)
+                            if (ipBytes[0] >= 224 || ipBytes[3] == 255) continue;
+
+                            var ipAddr = new IPAddress(ipBytes);
+                            var macStr = string.Join(":", row.bPhysAddr.Take(Math.Min(row.dwPhysAddrLen, 6)).Select(b => b.ToString("X2")));
+                            if (macStr == "FF:FF:FF:FF:FF:FF" || macStr == "00:00:00:00:00:00") continue;
+
+                            devices.Add(new ArpDevice
                             {
-                                var device = new ArpDevice
-                                {
-                                    IpAddress = targetIp.ToString(),
-                                    MacAddress = string.Join(":", mac.Select(b => b.ToString("X2"))),
-                                    Interface = nic.Name
-                                };
-                                lock (devicesLock)
-                                {
-                                    devices.Add(device);
-                                }
-                            }
+                                IpAddress = ipAddr.ToString(),
+                                MacAddress = macStr,
+                                Interface = nicName
+                            });
                         }
-                        catch { /* ARP failed for this IP — normal */ }
-                    });
+                    }
+                }
+                finally
+                {
+                    Marshal.FreeCoTaskMem(buffer);
                 }
             }
 

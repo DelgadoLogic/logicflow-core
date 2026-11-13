@@ -41,79 +41,178 @@ public sealed class SystemProfiler
         };
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
     private CpuInfo GetCpuInfo()
     {
-        using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Processor");
-        foreach (var obj in searcher.Get())
+        string fastName = "";
+        try
         {
-            return new CpuInfo
-            {
-                Name = obj["Name"]?.ToString() ?? "Unknown",
-                Cores = Convert.ToInt32(obj["NumberOfCores"]),
-                LogicalProcessors = Convert.ToInt32(obj["NumberOfLogicalProcessors"]),
-                MaxClockSpeed = Convert.ToInt32(obj["MaxClockSpeed"]),
-                ProcessorId = obj["ProcessorId"]?.ToString() ?? "",
-                Architecture = RuntimeInformation.ProcessArchitecture.ToString()
-            };
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0");
+            fastName = key?.GetValue("ProcessorNameString") as string ?? "";
         }
-        return new CpuInfo { Name = "Unknown" };
+        catch { }
+
+        try
+        {
+            using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Processor");
+            foreach (var obj in searcher.Get())
+            {
+                var wmiName = obj["Name"]?.ToString();
+                return new CpuInfo
+                {
+                    Name = !string.IsNullOrWhiteSpace(fastName) ? fastName.Trim() : (!string.IsNullOrWhiteSpace(wmiName) ? wmiName.Trim() : "Processor"),
+                    Cores = Convert.ToInt32(obj["NumberOfCores"]),
+                    LogicalProcessors = Convert.ToInt32(obj["NumberOfLogicalProcessors"]),
+                    MaxClockSpeed = Convert.ToInt32(obj["MaxClockSpeed"]),
+                    ProcessorId = obj["ProcessorId"]?.ToString() ?? "",
+                    Architecture = RuntimeInformation.ProcessArchitecture.ToString()
+                };
+            }
+        }
+        catch { }
+
+        return new CpuInfo
+        {
+            Name = !string.IsNullOrWhiteSpace(fastName) ? fastName.Trim() : "Multi-Core Processor",
+            Cores = Environment.ProcessorCount / 2 > 0 ? Environment.ProcessorCount / 2 : Environment.ProcessorCount,
+            LogicalProcessors = Environment.ProcessorCount,
+            Architecture = RuntimeInformation.ProcessArchitecture.ToString()
+        };
     }
 
     private MemoryInfo GetMemoryInfo()
     {
-        using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_ComputerSystem");
-        foreach (var obj in searcher.Get())
+        var mem = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
+        if (GlobalMemoryStatusEx(ref mem))
         {
             return new MemoryInfo
             {
-                TotalPhysicalBytes = Convert.ToInt64(obj["TotalPhysicalMemory"]),
-                AvailableBytes = GetAvailableMemory()
+                TotalPhysicalBytes = (long)mem.ullTotalPhys,
+                AvailableBytes = (long)mem.ullAvailPhys
             };
         }
+
+        try
+        {
+            using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_ComputerSystem");
+            foreach (var obj in searcher.Get())
+            {
+                return new MemoryInfo
+                {
+                    TotalPhysicalBytes = Convert.ToInt64(obj["TotalPhysicalMemory"]),
+                    AvailableBytes = GetAvailableMemory()
+                };
+            }
+        }
+        catch { }
         return new MemoryInfo();
     }
 
     private static long GetAvailableMemory()
     {
-        using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem");
-        foreach (var obj in searcher.Get())
+        var mem = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
+        if (GlobalMemoryStatusEx(ref mem)) return (long)mem.ullAvailPhys;
+
+        try
         {
-            return Convert.ToInt64(obj["FreePhysicalMemory"]) * 1024; // KB to bytes
+            using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem");
+            foreach (var obj in searcher.Get())
+            {
+                return Convert.ToInt64(obj["FreePhysicalMemory"]) * 1024; // KB to bytes
+            }
         }
+        catch { }
         return 0;
     }
 
     private GpuInfo GetGpuInfo()
     {
-        using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_VideoController");
-        foreach (var obj in searcher.Get())
+        try
         {
-            return new GpuInfo
+            using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_VideoController");
+            foreach (var obj in searcher.Get())
             {
-                Name = obj["Name"]?.ToString() ?? "Unknown",
-                DriverVersion = obj["DriverVersion"]?.ToString() ?? "",
-                AdapterRam = Convert.ToInt64(obj["AdapterRAM"]),
-                DeviceId = obj["PNPDeviceID"]?.ToString() ?? ""
-            };
+                return new GpuInfo
+                {
+                    Name = obj["Name"]?.ToString() ?? "Unknown",
+                    DriverVersion = obj["DriverVersion"]?.ToString() ?? "",
+                    AdapterRam = Convert.ToInt64(obj["AdapterRAM"]),
+                    DeviceId = obj["PNPDeviceID"]?.ToString() ?? ""
+                };
+            }
         }
-        return new GpuInfo { Name = "Unknown" };
+        catch { }
+        return new GpuInfo { Name = "Display Controller" };
     }
 
     private OsInfo GetOsInfo()
     {
-        using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem");
-        foreach (var obj in searcher.Get())
+        int build = Environment.OSVersion.Version.Build;
+        try
         {
-            return new OsInfo
+            using var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_OperatingSystem");
+            foreach (var obj in searcher.Get())
             {
-                Caption = obj["Caption"]?.ToString() ?? "Unknown",
-                Version = obj["Version"]?.ToString() ?? "",
-                BuildNumber = obj["BuildNumber"]?.ToString() ?? "",
-                Architecture = obj["OSArchitecture"]?.ToString() ?? "",
-                InstallDate = ManagementDateTimeConverter.ToDateTime(obj["InstallDate"]?.ToString() ?? "")
-            };
+                DateTime installDate = DateTime.MinValue;
+                try
+                {
+                    var idStr = obj["InstallDate"]?.ToString();
+                    if (!string.IsNullOrEmpty(idStr))
+                        installDate = ManagementDateTimeConverter.ToDateTime(idStr);
+                }
+                catch { }
+
+                var caption = obj["Caption"]?.ToString() ?? RuntimeInformation.OSDescription;
+                var buildStr = obj["BuildNumber"]?.ToString() ?? "";
+                if (int.TryParse(buildStr, out int b) && b > 0) build = b;
+
+                if (build >= 22000 && caption.Contains("Windows 10", StringComparison.OrdinalIgnoreCase))
+                {
+                    caption = System.Text.RegularExpressions.Regex.Replace(caption, @"Windows\s*10", "Windows 11", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                }
+
+                return new OsInfo
+                {
+                    Caption = caption,
+                    Version = obj["Version"]?.ToString() ?? Environment.OSVersion.Version.ToString(),
+                    BuildNumber = build.ToString(),
+                    Architecture = obj["OSArchitecture"]?.ToString() ?? RuntimeInformation.OSArchitecture.ToString(),
+                    InstallDate = installDate
+                };
+            }
         }
-        return new OsInfo { Caption = "Unknown" };
+        catch { }
+
+        var fallbackCaption = RuntimeInformation.OSDescription;
+        if (build >= 22000 && fallbackCaption.Contains("Windows 10", StringComparison.OrdinalIgnoreCase))
+        {
+            fallbackCaption = System.Text.RegularExpressions.Regex.Replace(fallbackCaption, @"Windows\s*10", "Windows 11", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        return new OsInfo
+        {
+            Caption = fallbackCaption,
+            Version = Environment.OSVersion.Version.ToString(),
+            BuildNumber = build.ToString(),
+            Architecture = RuntimeInformation.OSArchitecture.ToString()
+        };
     }
 
     private List<DiskInfo> GetDiskInfo()

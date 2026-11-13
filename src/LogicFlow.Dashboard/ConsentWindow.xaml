@@ -1,0 +1,248 @@
+<Window x:Class="LogicFlow.Dashboard.ConsentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to LogicFlow" Width="680" MinWidth="580" MinHeight="460" SizeToContent="Height" MaxHeight="840"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip"
+        Background="{DynamicResource BrandDarkBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="{StaticResource AppFont}" Icon="pack://application:,,,/LogicFlow;component/Assets/Brand/shield_64.png">
+    <Window.Resources>
+        <Style x:Key="ChoiceCard" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Card" Background="{DynamicResource BrandDarkPanelBrush}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="8" Padding="14,8">
+                            <DockPanel>
+                                <Ellipse x:Name="Dot" Width="14" Height="14" Stroke="#64748B" StrokeThickness="2" Margin="0,3,12,0"
+                                         VerticalAlignment="Top" DockPanel.Dock="Left" Fill="Transparent"/>
+                                <ContentPresenter/>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource BrandCyanBrush}"/>
+                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource BrushAccentGlow}"/>
+                                <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource BrandCyanBrush}"/>
+                                <Setter TargetName="Dot" Property="Stroke" Value="{DynamicResource BrandCyanBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource BrushBorderHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Pinned Header & Step Indicator -->
+        <StackPanel Grid.Row="0" Margin="28,20,28,0">
+            <DockPanel LastChildFill="True" Margin="0,0,0,10">
+                <Image Source="pack://application:,,,/LogicFlow;component/Assets/Brand/shield_128.png" Width="52" Height="52" Margin="0,0,14,0" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Welcome to LogicFlow" FontSize="22" FontWeight="Bold" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="StepSubtitle" Text="Configure your region, edition, and startup preferences. You can change these later in Settings."
+                               FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </DockPanel>
+
+            <Border Background="{DynamicResource BrandDarkPanelBrush}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="6" Padding="12,7" Margin="0,0,0,10">
+                <DockPanel>
+                    <TextBlock x:Name="StepIndicatorText" Text="Step 1 of 3 · Region &amp; License Agreement"
+                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource BrandCyanBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="StepRegionBadge" Text="" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Scrollable Step Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="28,2,28,6">
+            <StackPanel>
+                <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                <!-- STEP 1 OF 3: REGION & LICENSE AGREEMENT                                 -->
+                <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                <StackPanel x:Name="Step1RegionPanel" Visibility="Visible">
+                    <Border Background="{DynamicResource BrandDarkPanelBrush}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="8" Padding="16,14" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Where are you located?" FontWeight="Bold" FontSize="14" Margin="0,0,0,4"/>
+                            <TextBlock Text="Your country or region determines which privacy and consumer protection rules apply to your setup."
+                                       TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+
+                            <ComboBox x:Name="CmbRegion" MinWidth="220" MaxWidth="320" Height="32" HorizontalAlignment="Left" Width="320" SelectionChanged="OnRegionChanged">
+                                <ComboBoxItem Content="United States" Tag="UnitedStates"/>
+                                <ComboBoxItem Content="Canada" Tag="Canada"/>
+                                <ComboBoxItem Content="Mexico" Tag="Mexico"/>
+                                <ComboBoxItem Content="European Union / EEA" Tag="EuEea"/>
+                                <ComboBoxItem Content="United Kingdom" Tag="UnitedKingdom"/>
+                                <ComboBoxItem Content="Switzerland" Tag="Switzerland"/>
+                                <ComboBoxItem Content="Australia / New Zealand" Tag="AustraliaNewZealand"/>
+                                <ComboBoxItem Content="Japan" Tag="Japan"/>
+                                <ComboBoxItem Content="South Korea" Tag="SouthKorea"/>
+                                <ComboBoxItem Content="Brazil" Tag="Brazil"/>
+                                <ComboBoxItem Content="India" Tag="India"/>
+                                <ComboBoxItem Content="Other / Rest of World" Tag="RestOfWorld"/>
+                            </ComboBox>
+
+                            <TextBlock x:Name="RegionDetectionNote"
+                                       Text="Auto-detected from your Windows region setting — no IP address lookup is performed."
+                                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{DynamicResource BrandDarkPanelBrush}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="8" Padding="16,14">
+                        <StackPanel>
+                            <TextBlock Text="End User License Agreement" FontWeight="Bold" FontSize="14" Margin="0,0,0,4"/>
+                            <TextBlock Text="Please review and accept the LogicFlow End User License Agreement before continuing."
+                                       TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+
+                            <CheckBox x:Name="ChkEula" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,2,0,10"
+                                      Checked="OnTelemetryBoxChanged" Unchecked="OnTelemetryBoxChanged">
+                                <TextBlock TextWrapping="Wrap">
+                                    <Run Text="I have read and accept the End User License Agreement."/>
+                                </TextBlock>
+                            </CheckBox>
+
+                            <StackPanel Orientation="Horizontal" Margin="26,0,0,0">
+                                <Button Content="Read EULA" Click="OnReadEula" Style="{StaticResource HeaderOutlineButton}" Height="26" Padding="12,0" Margin="0,0,8,0"/>
+                                <Button Content="Privacy Policy" Click="OnOpenPrivacy" Style="{StaticResource HeaderOutlineButton}" Height="26" Padding="12,0" Margin="0,0,8,0"/>
+                                <Button Content="Terms of Service" Click="OnOpenTerms" Style="{StaticResource HeaderOutlineButton}" Height="26" Padding="12,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                <!-- STEP 2 OF 3: EDITION & DIAGNOSTICS (ADAPTED TO STEP 1'S REGION)         -->
+                <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                <StackPanel x:Name="Step2EditionPanel" Visibility="Collapsed">
+                    <RadioButton x:Name="RbFree" Style="{StaticResource ChoiceCard}" GroupName="edition" Checked="OnEditionChanged">
+                        <StackPanel>
+                            <TextBlock Text="Free — $0" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="Scan-only: see what LogicFlow finds. No fixes, no data sharing of any kind. 1 device."/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="RbCommunity" Style="{StaticResource ChoiceCard}" GroupName="edition" IsChecked="True" Checked="OnEditionChanged">
+                        <StackPanel>
+                            <TextBlock Text="Community — $0 (with diagnostics sharing)" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock x:Name="CommunityText" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Text="All core features, 1 device, personal and non-commercial use. Provided at $0 (no monetary cost) in exchange for pseudonymous diagnostics sharing (details below). You can decline and use Free instead."/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="RbPro" Style="{StaticResource ChoiceCard}" GroupName="edition" Checked="OnEditionChanged">
+                        <StackPanel>
+                            <TextBlock x:Name="ProTitle" Text="Pro — $19.99 launch ($29.99 regular) · 14-day Pro trial available" FontWeight="Bold" FontSize="14" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="ProText" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <Border x:Name="TelemetryPanel" Background="{DynamicResource BrandDarkPanelBrush}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,4,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Diagnostics Sharing" FontWeight="Bold" FontSize="14" Margin="0,0,0,3"/>
+                            <TextBlock x:Name="TelemetryIntro" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+
+                            <CheckBox x:Name="ChkStandard" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,2,0,2"
+                                      Checked="OnTelemetryBoxChanged" Unchecked="OnTelemetryBoxChanged">
+                                <TextBlock TextWrapping="Wrap" Text="Standard: crash and error reports, feature usage, scan counts"/>
+                            </CheckBox>
+                            <TextBlock Text="Crash messages are scrubbed of file paths, user and machine names, email, and IP addresses before leaving your PC."
+                                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="26,0,0,5"/>
+
+                            <CheckBox x:Name="ChkExtended" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,2,0,2"
+                                      Checked="OnTelemetryBoxChanged" Unchecked="OnTelemetryBoxChanged">
+                                <TextBlock TextWrapping="Wrap" Text="Extended: system baseline and driver index (services, BIOS/firmware, devices and drivers, installed updates)"/>
+                            </CheckBox>
+                            <TextBlock x:Name="ExtendedNote" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="26,0,0,5"/>
+
+                            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,0"
+                                       Text="Data is tied to a random install ID (pseudonymous, not a hardware ID). In Settings you can view exactly what is sent, reset the ID, or delete your data."/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                <!-- STEP 3 OF 3: STARTUP & APPLICATION PREFERENCES                          -->
+                <!-- ═══════════════════════════════════════════════════════════════════════ -->
+                <StackPanel x:Name="Step3PreferencesPanel" Visibility="Collapsed">
+                    <Border Background="{DynamicResource BrandDarkPanelBrush}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1" CornerRadius="8" Padding="16,14">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,10">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="Startup &amp; Application Preferences" FontWeight="Bold" FontSize="14"/>
+                                    <TextBlock x:Name="PresetStatusText" Text="Preset: Recommended Settings" FontSize="11" Foreground="{DynamicResource BrandCyanBrush}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                    <Button x:Name="BtnRecommendedPreset" Content="Use Recommended Settings" Click="OnRecommendedPresetClick"
+                                            Style="{StaticResource HeaderOutlineButton}" Height="26" Padding="12,0"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <CheckBox x:Name="ChkPrefStartWithWindows" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,6,0,2"
+                                      IsChecked="False" Checked="OnPreferenceBoxChanged" Unchecked="OnPreferenceBoxChanged">
+                                <TextBlock TextWrapping="Wrap" Text="Start LogicFlow minimized in the system tray when Windows starts"/>
+                            </CheckBox>
+                            <TextBlock Text="Registers a background logon task (--tray). Leave unchecked if you prefer to launch LogicFlow manually."
+                                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="26,0,0,6"/>
+
+                            <CheckBox x:Name="ChkPrefMinimizeToTray" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,4,0,2"
+                                      IsChecked="True" Checked="OnPreferenceBoxChanged" Unchecked="OnPreferenceBoxChanged">
+                                <TextBlock TextWrapping="Wrap" Text="Minimize LogicFlow to the system tray when closing the window (Recommended)"/>
+                            </CheckBox>
+                            <TextBlock Text="Keeps quick actions and system monitoring accessible from the tray icon."
+                                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="26,0,0,6"/>
+
+                            <CheckBox x:Name="ChkPrefCheckUpdates" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,4,0,2"
+                                      IsChecked="True" Checked="OnPreferenceBoxChanged" Unchecked="OnPreferenceBoxChanged">
+                                <TextBlock TextWrapping="Wrap" Text="Check for signed LogicFlow updates automatically on launch (Recommended)"/>
+                            </CheckBox>
+                            <TextBlock Text="Verifies Ed25519-signed release manifests on startup."
+                                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="26,0,0,6"/>
+
+                            <CheckBox x:Name="ChkPrefScanSmart" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,4,0,2"
+                                      IsChecked="True" Checked="OnPreferenceBoxChanged" Unchecked="OnPreferenceBoxChanged">
+                                <TextBlock TextWrapping="Wrap" Text="Check drive S.M.A.R.T. health indicators on startup (Recommended)"/>
+                            </CheckBox>
+                            <TextBlock Text="Reads physical disk temperature and wear indicators without slowing down startup."
+                                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="26,0,0,6"/>
+
+                            <CheckBox x:Name="ChkPrefTelemetryBlocking" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" Margin="0,4,0,2"
+                                      IsChecked="False" Checked="OnPreferenceBoxChanged" Unchecked="OnPreferenceBoxChanged">
+                                <TextBlock TextWrapping="Wrap" Text="Apply Windows AI &amp; Telemetry Group Policy blocks (Copilot, Recall, Edge Sidebar, Widgets)"/>
+                            </CheckBox>
+                            <TextBlock Text="Modifies HKLM/HKCU policy keys to disable Windows Copilot, Recall, Edge Sidebar, and Widgets. Off by default so existing Windows features are not altered unless requested."
+                                       TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="26,0,0,2"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Pinned Footer & Navigation Buttons -->
+        <Border Grid.Row="2" Background="{DynamicResource BrandDarkBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="28,10,28,18">
+            <StackPanel>
+                <TextBlock x:Name="Footer" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                <DockPanel LastChildFill="True">
+                    <Button x:Name="BtnBack" Content="← Back" Click="OnBack" Style="{StaticResource OutlineButton}"
+                            Height="34" Padding="16,0" Margin="0,2,10,0" DockPanel.Dock="Left" Visibility="Collapsed"/>
+                    <WrapPanel HorizontalAlignment="Right">
+                        <Button x:Name="BtnDecline" Content="Use Free ($0 — No Telemetry)" Click="OnUseFree"
+                                Style="{StaticResource OutlineButton}" Height="34" Padding="16,0" Margin="0,2,10,0" Visibility="Collapsed"/>
+                        <Button x:Name="BtnContinue" Content="Next: Choose Edition →" Click="OnContinue"
+                                Style="{StaticResource ActionButton}" Height="34" Padding="22,0" Margin="0,2,0,0" IsEnabled="False"/>
+                    </WrapPanel>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

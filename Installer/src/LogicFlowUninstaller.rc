@@ -1,0 +1,61 @@
+// LogicFlowUninstaller.rc — Version metadata, sprites & manifest for UninstallLogicFlow.exe
+// Delgado Creative Enterprises LLC d/b/a DelgadoLogic
+
+#include <windows.h>
+
+#define IDI_APP_ICON        1
+#define IDR_PNG_BG          102
+#define IDR_PNG_HEROSHIELD  103
+#define IDR_PNG_AURA        104
+#define IDR_PNG_MINISHIELD  105
+#define IDR_PNG_WORDMARK    106
+#define IDR_PNG_CLOSE       107
+#define IDR_PNG_TRACK       108
+#define IDR_PNG_FILL        109
+#define IDR_PNG_FRAME       110
+#define IDR_PNG_CRYSTALLOGO 113
+
+IDI_APP_ICON        ICON   "..\\..\\Assets\\Icons\\LogicFlow.ico"
+IDR_PNG_BG          RCDATA "..\\assets\\sprites\\bg_circuit_tile.png"
+IDR_PNG_HEROSHIELD  RCDATA "..\\assets\\sprites\\logo_sentinel_core.png"
+IDR_PNG_AURA        RCDATA "..\\assets\\sprites\\logo_sentinel_aura.png"
+IDR_PNG_MINISHIELD  RCDATA "..\\assets\\sprites\\logo_shield_small.png"
+IDR_PNG_WORDMARK    RCDATA "..\\assets\\sprites\\label_delgadologic.png"
+IDR_PNG_CLOSE       RCDATA "..\\assets\\sprites\\btn_close.png"
+IDR_PNG_TRACK       RCDATA "..\\assets\\sprites\\progress_bar_track.png"
+IDR_PNG_FILL        RCDATA "..\\assets\\sprites\\progress_bar_fill_cyan.png"
+IDR_PNG_FRAME       RCDATA "..\\assets\\sprites\\window_frame.png"
+IDR_PNG_CRYSTALLOGO RCDATA "..\\..\\Assets\\Icons\\logicflow_logo.png"
+
+// ── Version Info ────────────────────────────────────────────────────────────
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "Delgado Creative Enterprises LLC d/b/a DelgadoLogic\0"
+            VALUE "FileDescription",  "LogicFlow Uninstaller\0"
+            VALUE "FileVersion",      "1.0.0.0\0"
+            VALUE "InternalName",     "UninstallLogicFlow\0"
+            VALUE "LegalCopyright",   "Copyright (c) 2026 Delgado Creative Enterprises LLC d/b/a DelgadoLogic. All rights reserved.\0"
+            VALUE "OriginalFilename", "UninstallLogicFlow.exe\0"
+            VALUE "ProductName",      "LogicFlow\0"
+            VALUE "ProductVersion",   "1.0.0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END
+
+// ── Manifest (requestedExecutionLevel = requireAdministrator) ─────────────────
+1 24 "LogicFlowInstaller.manifest"

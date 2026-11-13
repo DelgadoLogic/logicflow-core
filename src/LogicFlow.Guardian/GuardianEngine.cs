@@ -2,6 +2,7 @@
 // Proprietary implementation by DelgadoLogic.Tech
 // Hardware ID matching, power plan automation, debloat, startup optimization
 
+using System.Diagnostics;
 using System.Management;
 using Microsoft.Extensions.Logging;
 
@@ -146,29 +147,112 @@ public sealed class DebloatEngine
     {
         _logger.LogInformation("Scanning for bloatware...");
         var packages = new List<BloatwarePackage>();
+        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        using var searcher = new ManagementObjectSearcher(
-            "SELECT * FROM Win32_InstalledStoreProgram");
-
-        foreach (var obj in searcher.Get())
+        // 1. Try WMI Win32_InstalledStoreProgram (works if elevated)
+        try
         {
-            var name = obj["Name"]?.ToString() ?? "";
-            var isBloat = KnownBloatware.Any(b => name.Contains(b, StringComparison.OrdinalIgnoreCase));
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT * FROM Win32_InstalledStoreProgram");
 
-            if (isBloat)
+            foreach (var obj in searcher.Get())
             {
-                packages.Add(new BloatwarePackage
+                var name = obj["Name"]?.ToString() ?? "";
+                var isBloat = KnownBloatware.Any(b => name.Contains(b, StringComparison.OrdinalIgnoreCase));
+
+                if (isBloat && seenNames.Add(name))
                 {
-                    Name = name,
-                    Publisher = obj["Vendor"]?.ToString() ?? "",
-                    Version = obj["Version"]?.ToString() ?? "",
-                    IsSafeToRemove = true
-                });
+                    packages.Add(new BloatwarePackage
+                    {
+                        Name = name,
+                        Publisher = obj["Vendor"]?.ToString() ?? "",
+                        Version = obj["Version"]?.ToString() ?? "",
+                        IsSafeToRemove = true
+                    });
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "WMI Win32_InstalledStoreProgram query failed or access denied, checking registry repository.");
+        }
+
+        // 2. Supplementary/Fallback: query user AppModel repository in Registry
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages");
+            if (key != null)
+            {
+                foreach (var subName in key.GetSubKeyNames())
+                {
+                    var isBloat = KnownBloatware.Any(b => subName.Contains(b, StringComparison.OrdinalIgnoreCase));
+                    if (isBloat && seenNames.Add(subName))
+                    {
+                        packages.Add(new BloatwarePackage
+                        {
+                            Name = subName,
+                            Publisher = "Microsoft Corporation",
+                            Version = "",
+                            IsSafeToRemove = true
+                        });
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Registry AppModel Repository query failed.");
         }
 
         _logger.LogInformation("Found {Count} bloatware packages", packages.Count);
         return packages;
+    }
+
+    /// <summary>
+    /// Removes a specific UWP / AppX bloatware package using PowerShell AppX cmdlets.
+    /// </summary>
+    public bool RemoveBloatware(string packageName)
+    {
+        if (string.IsNullOrWhiteSpace(packageName)) return false;
+        try
+        {
+            _logger.LogInformation("Removing bloatware package: {Name}", packageName);
+            var sanitizedName = packageName.Replace("'", "").Replace("\"", "").Replace(";", "");
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -NonInteractive -Command \"Get-AppxPackage -Name '*{sanitizedName}*' | Remove-AppxPackage -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online | Where-Object {{ $_.DisplayName -like '*{sanitizedName}*' }} | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            using var proc = Process.Start(psi);
+            proc?.WaitForExit(30000);
+            return proc?.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove bloatware package {Name}", packageName);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Removes multiple bloatware packages and returns the count of successful removals.
+    /// </summary>
+    public int RemoveBloatwarePackages(IEnumerable<string> packageNames)
+    {
+        int removed = 0;
+        foreach (var pkg in packageNames)
+        {
+            if (RemoveBloatware(pkg))
+            {
+                removed++;
+            }
+        }
+        return removed;
     }
 }
 
@@ -185,45 +269,153 @@ public sealed class StartupOptimizer
     }
 
     /// <summary>
-    /// Enumerates all startup items and scores their performance impact.
+    /// Enumerates all startup items and scores their performance impact across HKCU, HKLM, and startup folders.
     /// </summary>
     public List<StartupItem> AnalyzeStartupItems()
     {
         var items = new List<StartupItem>();
+        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Check Run registry keys
-        var runKeys = new[]
+        // 1. Check HKCU Run keys (Primary location for user applications)
+        var hkcuKeys = new[]
+        {
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+        };
+
+        foreach (var keyPath in hkcuKeys)
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(keyPath);
+                if (key != null)
+                {
+                    foreach (var valueName in key.GetValueNames())
+                    {
+                        if (seenNames.Add(valueName))
+                        {
+                            items.Add(new StartupItem
+                            {
+                                Name = valueName,
+                                Command = key.GetValue(valueName)?.ToString() ?? "",
+                                Source = $"HKCU\\{keyPath}",
+                                ImpactScore = EstimateImpact(valueName)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not read HKCU startup key: {Key}", keyPath);
+            }
+        }
+
+        // 2. Check HKLM Run registry keys
+        var hklmKeys = new[]
         {
             @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
             @"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
             @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run",
         };
 
-        foreach (var keyPath in runKeys)
+        foreach (var keyPath in hklmKeys)
         {
             try
             {
                 using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(keyPath);
-                if (key is null) continue;
-
-                foreach (var valueName in key.GetValueNames())
+                if (key != null)
                 {
-                    items.Add(new StartupItem
+                    foreach (var valueName in key.GetValueNames())
                     {
-                        Name = valueName,
-                        Command = key.GetValue(valueName)?.ToString() ?? "",
-                        Source = $"HKLM\\{keyPath}",
-                        ImpactScore = EstimateImpact(valueName)
-                    });
+                        if (seenNames.Add(valueName))
+                        {
+                            items.Add(new StartupItem
+                            {
+                                Name = valueName,
+                                Command = key.GetValue(valueName)?.ToString() ?? "",
+                                Source = $"HKLM\\{keyPath}",
+                                ImpactScore = EstimateImpact(valueName)
+                            });
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "Could not read startup key: {Key}", keyPath);
+                _logger.LogDebug(ex, "Could not read HKLM startup key: {Key}", keyPath);
+            }
+        }
+
+        // 3. Check User and Common Startup Folders
+        var startupFolders = new[]
+        {
+            (Environment.GetFolderPath(Environment.SpecialFolder.Startup), "User Startup Folder"),
+            (Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), "All Users Startup Folder")
+        };
+
+        foreach (var (dir, label) in startupFolders)
+        {
+            try
+            {
+                if (Directory.Exists(dir))
+                {
+                    foreach (var file in Directory.EnumerateFiles(dir))
+                    {
+                        var name = Path.GetFileNameWithoutExtension(file);
+                        if (seenNames.Add(name))
+                        {
+                            items.Add(new StartupItem
+                            {
+                                Name = name,
+                                Command = file,
+                                Source = label,
+                                ImpactScore = EstimateImpact(name)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not enumerate startup folder: {Folder}", dir);
             }
         }
 
         return items.OrderByDescending(i => i.ImpactScore).ToList();
+    }
+
+    /// <summary>
+    /// Disables or removes an autostart item from HKCU or HKLM Run registry.
+    /// </summary>
+    public bool DisableStartupItem(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        bool removed = false;
+
+        try
+        {
+            using var hkcu = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            if (hkcu != null && hkcu.GetValue(name) != null)
+            {
+                hkcu.DeleteValue(name, false);
+                removed = true;
+            }
+        }
+        catch { }
+
+        try
+        {
+            using var hklm = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            if (hklm != null && hklm.GetValue(name) != null)
+            {
+                hklm.DeleteValue(name, false);
+                removed = true;
+            }
+        }
+        catch { }
+
+        return removed;
     }
 
     private static int EstimateImpact(string name)
@@ -272,6 +464,7 @@ public sealed record BloatwarePackage
     public string Publisher { get; init; } = "";
     public string Version { get; init; } = "";
     public bool IsSafeToRemove { get; init; }
+    public bool IsSelected { get; set; } = true;
 }
 
 public sealed record StartupItem

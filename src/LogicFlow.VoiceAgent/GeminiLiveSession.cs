@@ -36,6 +36,7 @@ public sealed class GeminiLiveSession : IAsyncDisposable
     private readonly string _apiKey;
     private readonly LiveSetup _setupMsg;
     private readonly ILogger _log;
+    private readonly string? _proxyWssUrl;
 
     private ClientWebSocket? _ws;
     private CancellationToken _ct;
@@ -54,11 +55,31 @@ public sealed class GeminiLiveSession : IAsyncDisposable
 
     public bool IsConnected => _ws?.State == WebSocketState.Open;
 
-    public GeminiLiveSession(string apiKey, LiveSetup setupMsg, ILogger log)
+    public Uri TargetUri => BuildConnectUri();
+
+    public GeminiLiveSession(string apiKey, LiveSetup setupMsg, ILogger log, string? proxyWssUrl = null)
     {
         _apiKey = apiKey;
         _setupMsg = setupMsg;
         _log = log;
+        _proxyWssUrl = proxyWssUrl;
+    }
+
+    public Uri BuildConnectUri()
+    {
+        if (!string.IsNullOrWhiteSpace(_proxyWssUrl))
+        {
+            var trimmed = _proxyWssUrl.Trim();
+            if (trimmed.Contains("token=", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.Contains("key=", StringComparison.OrdinalIgnoreCase))
+            {
+                return new Uri(trimmed);
+            }
+            var sep = trimmed.Contains('?') ? "&" : "?";
+            return new Uri($"{trimmed}{sep}token={Uri.EscapeDataString(_apiKey)}");
+        }
+
+        return new Uri($"{WssBase}?key={Uri.EscapeDataString(_apiKey)}");
     }
 
     // ── Connect and begin the session ─────────────────────────────────────
@@ -68,8 +89,8 @@ public sealed class GeminiLiveSession : IAsyncDisposable
         _ct = ct;
         _ws = new ClientWebSocket();
 
-        var uri = new Uri($"{WssBase}?key={_apiKey}");
-        _log.LogInformation("[VoiceAgent] Connecting to Gemini Live API...");
+        var uri = BuildConnectUri();
+        _log.LogInformation("[VoiceAgent] Connecting to Live API endpoint {Host}...", uri.Host);
         await _ws.ConnectAsync(uri, ct);
         _log.LogInformation("[VoiceAgent] Connected. Sending setup...");
 

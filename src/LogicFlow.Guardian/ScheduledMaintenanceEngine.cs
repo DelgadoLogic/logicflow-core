@@ -15,14 +15,47 @@ namespace LogicFlow.Guardian;
 public sealed class ScheduledMaintenanceEngine
 {
     private readonly ILogger<ScheduledMaintenanceEngine>? _logger;
-    private const string TaskName = "LogicFlow_AutoMaintenance";
+    private readonly string _taskName;
+    private readonly string _commandArgs;
+    public const string DefaultTaskName = "LogicFlow_AutoMaintenance";
+    public const string TaskName = DefaultTaskName;
+    public const string WeeklyJunkCleanTaskName = "LogicFlow_WeeklyJunkClean";
     private const string TaskFolder = "\\LogicFlow";
 
-    public ScheduledMaintenanceEngine(ILogger<ScheduledMaintenanceEngine>? logger = null)
-        => _logger = logger;
+    public ScheduledMaintenanceEngine(
+        ILogger<ScheduledMaintenanceEngine>? logger = null,
+        string taskName = DefaultTaskName,
+        string commandArgs = "--auto-maintenance")
+    {
+        _logger = logger;
+        _taskName = string.IsNullOrWhiteSpace(taskName) ? DefaultTaskName : taskName;
+        _commandArgs = string.IsNullOrWhiteSpace(commandArgs) ? "--auto-maintenance" : commandArgs;
+    }
+
+    /// <summary>
+    /// Optional command runner seam for unit testing without mutating Windows Task Scheduler.
+    /// </summary>
+    public Func<string, ScheduleResult>? CommandRunnerOverride { get; set; }
+
+    private static bool IsCurrentProcessElevated()
+    {
+        try
+        {
+            using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            var principal = new System.Security.Principal.WindowsPrincipal(identity);
+            return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     /// <summary>
     /// Creates or updates the maintenance scheduled task.
+    /// Uses lf.exe when available for CLI subcommands (avoiding GUI launches), and registers under the current
+    /// user context (with /RL HIGHEST when elevated or /RL LIMITED when standard user) so user-profile temp/cache
+    /// directories are cleaned accurately instead of running blind in Session 0 SYSTEM.
     /// </summary>
     public ScheduleResult CreateSchedule(MaintenanceSchedule schedule)
     {
@@ -31,31 +64,58 @@ public sealed class ScheduledMaintenanceEngine
             // Delete existing task if it exists
             DeleteSchedule();
 
-            var exePath = Process.GetCurrentProcess().MainModule?.FileName
-                ?? Path.Combine(AppContext.BaseDirectory, "LogicFlow.exe");
+            var lfCli = Path.Combine(AppContext.BaseDirectory, "lf.exe");
+            var altCli = Path.Combine(AppContext.BaseDirectory, "LogicFlow.CLI.exe");
+            var appExe = Path.Combine(AppContext.BaseDirectory, "LogicFlow.exe");
+
+            string exePath;
+            string effectiveArgs = _commandArgs;
+            bool isFlagArg = effectiveArgs.StartsWith("-", StringComparison.Ordinal);
+
+            if (!isFlagArg && File.Exists(lfCli))
+            {
+                exePath = lfCli;
+            }
+            else if (!isFlagArg && File.Exists(altCli))
+            {
+                exePath = altCli;
+            }
+            else if (File.Exists(appExe))
+            {
+                exePath = appExe;
+                if (!isFlagArg)
+                {
+                    effectiveArgs = "--auto-maintenance";
+                }
+            }
+            else
+            {
+                exePath = Process.GetCurrentProcess().MainModule?.FileName ?? appExe;
+            }
 
             var frequencyFlag = schedule.Frequency switch
             {
                 ScheduleFrequency.Daily => "/SC DAILY",
-                ScheduleFrequency.Weekly => $"/SC WEEKLY /D {schedule.DayOfWeek?.ToString()?.Substring(0, 3) ?? "SUN"}",
+                ScheduleFrequency.Weekly => $"/SC WEEKLY /D {schedule.DayOfWeek?.ToString()?.Substring(0, 3).ToUpperInvariant() ?? "SUN"}",
                 ScheduleFrequency.Monthly => "/SC MONTHLY /D 1",
                 _ => "/SC WEEKLY /D SUN"
             };
 
-            var args = $"/Create /TN \"{TaskFolder}\\{TaskName}\" " +
-                       $"/TR \"\\\"{exePath}\\\" --auto-maintenance\" " +
+            string runLevelFlag = IsCurrentProcessElevated() ? "/RL HIGHEST" : "/RL LIMITED";
+
+            var args = $"/Create /TN \"{TaskFolder}\\{_taskName}\" " +
+                       $"/TR \"\\\"{exePath}\\\" {effectiveArgs}\" " +
                        $"{frequencyFlag} " +
                        $"/ST {schedule.Time:HH:mm} " +
-                       $"/RL HIGHEST " +
-                       $"/F " +
-                       $"/RU SYSTEM";
+                       $"{runLevelFlag} " +
+                       $"/F";
 
             var result = RunSchtasks(args);
 
             if (result.Success)
             {
-                _logger?.LogInformation("Scheduled maintenance: {Freq} at {Time}",
-                    schedule.Frequency, schedule.Time);
+                _logger?.LogInformation("Scheduled maintenance ({Task}): {Freq} at {Time}",
+                    _taskName, schedule.Frequency, schedule.Time);
             }
 
             return result;
@@ -74,7 +134,7 @@ public sealed class ScheduledMaintenanceEngine
     {
         try
         {
-            return RunSchtasks($"/Delete /TN \"{TaskFolder}\\{TaskName}\" /F");
+            return RunSchtasks($"/Delete /TN \"{TaskFolder}\\{_taskName}\" /F");
         }
         catch (Exception ex)
         {
@@ -89,7 +149,7 @@ public sealed class ScheduledMaintenanceEngine
     {
         try
         {
-            var result = RunSchtasks($"/Query /TN \"{TaskFolder}\\{TaskName}\" /FO CSV /NH");
+            var result = RunSchtasks($"/Query /TN \"{TaskFolder}\\{_taskName}\" /FO CSV /NH");
 
             if (!result.Success || string.IsNullOrWhiteSpace(result.Message))
                 return new(false, ScheduleFrequency.Weekly, TimeOnly.Parse("03:00"), null, "Not configured");
@@ -119,7 +179,7 @@ public sealed class ScheduledMaintenanceEngine
     {
         try
         {
-            return RunSchtasks($"/Run /TN \"{TaskFolder}\\{TaskName}\"");
+            return RunSchtasks($"/Run /TN \"{TaskFolder}\\{_taskName}\"");
         }
         catch (Exception ex)
         {
@@ -131,6 +191,11 @@ public sealed class ScheduledMaintenanceEngine
 
     private ScheduleResult RunSchtasks(string args)
     {
+        if (CommandRunnerOverride != null)
+        {
+            return CommandRunnerOverride(args);
+        }
+
         var psi = new ProcessStartInfo("schtasks", args)
         {
             UseShellExecute = false,

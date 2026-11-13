@@ -1,0 +1,36 @@
+[
+  {
+    "schema": 1,
+    "eventId": "33333333-3333-4333-8333-333333330001",
+    "type": "baseline",
+    "ts": "2026-10-10T12:20:00Z",
+    "installId": "inst_fixture_0003_abcdefgh",
+    "appVersion": "1.0.0",
+    "osBuild": "10.0.26100.1742",
+    "arch": "x64",
+    "tier": "community",
+    "region": "CA",
+    "payload": {
+      "windows": { "edition": "Windows 11 Pro", "displayVersion": "24H2", "ubr": 1742 },
+      "hardware": {
+        "cpuName": "AMD Ryzen 7 5800X 8-Core Processor",
+        "cpuCores": 8,
+        "ramGb": 32,
+        "gpus": [{ "vendor": "NVIDIA", "name": "GeForce RTX 3070", "driverVersion": "32.0.15.6094", "driverDate": "2024-10-01" }],
+        "biosVendor": "American Megatrends",
+        "biosVersion": "F20",
+        "boardVendor": "Gigabyte",
+        "boardModel": "B550 AORUS ELITE",
+        "diskTypes": ["nvme", "hdd"]
+      },
+      "drivers": [
+        { "class": "Display", "vendor": "NVIDIA", "name": "NVIDIA GeForce RTX 3070", "version": "32.0.15.6094", "date": "2024-10-01" },
+        { "class": "Net", "vendor": "Realtek", "name": "Realtek PCIe 2.5GbE", "version": "10.68.1.0", "date": "2023-11-14" }
+      ],
+      "kbs": ["KB5044284", "KB5043080"],
+      "securityProducts": ["Microsoft Defender"],
+      "servicesRunning": 143,
+      "unexpectedField": "must be stripped"
+    }
+  }
+]

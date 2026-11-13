@@ -258,3 +258,35 @@ public struct DRIVERSTATUS
     [MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
     public uint[] dwReserved;
 }
+
+/// <summary>
+/// Native process execution control: NtSuspendProcess, NtResumeProcess, and priority management.
+/// </summary>
+public static class ProcessControl
+{
+    [DllImport("ntdll.dll", SetLastError = true)]
+    public static extern int NtSuspendProcess(IntPtr processHandle);
+
+    [DllImport("ntdll.dll", SetLastError = true)]
+    public static extern int NtResumeProcess(IntPtr processHandle);
+
+    public static bool Suspend(int processId)
+    {
+        try
+        {
+            var p = System.Diagnostics.Process.GetProcessById(processId);
+            return NtSuspendProcess(p.Handle) >= 0;
+        }
+        catch { return false; }
+    }
+
+    public static bool Resume(int processId)
+    {
+        try
+        {
+            var p = System.Diagnostics.Process.GetProcessById(processId);
+            return NtResumeProcess(p.Handle) >= 0;
+        }
+        catch { return false; }
+    }
+}

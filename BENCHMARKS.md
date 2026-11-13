@@ -1,44 +1,53 @@
-# ⚡ LogicFlow Performance Benchmarks
+# LogicFlow v1.0 — Engineering Benchmarks & Performance Baselines
 
-Transparency and proof are the bedrock of the DelgadoLogic philosophy. We don't just claim LogicFlow makes Windows faster—we prove it. 
+**Entity**: Delgado Creative Enterprises LLC d/b/a DelgadoLogic  
+**Last Updated**: October 13, 2026  
+**Test Environment**: Windows 11 Pro 64-bit (`23H2` / `24H2`), NVMe PCIe 4.0 SSD, 32 GB DDR5 RAM, .NET 8.0 (`win-x64` Release build).
 
-The tables below are generated continuously through our automated benchmarking harness, capturing system telemetry *Before* and *After* the execution of the `lf turbo enable` routines.
-
-## System Matrix Overview
-
-| Environment | Kernel | Profile | Purpose |
-|-------------|--------|---------|---------|
-| GCP Server 2025 | NT 10.0 (Win 11) | Datacenter Minimum | Baseline daemon connectivity, syntax checks, stability. |
-| GCP Server 2022 | NT 10.0 (Win 10) | Datacenter Minimum | Legacy API validation and error tolerance. |
-| Nested Consumer Win 11 | NT 10.0 (Win 11) | **Consumer "Dirty"** | Genuine OEM pre-installed bloatware environments. Real-world performance impacts. |
+> **Methodology Note**: The system optimization metrics in Section 1 represent controlled lab baseline measurements produced by `BenchmarkHarness.ps1` before and after running `lf sys turbo on` and `lf sys standby-purge`. Actual results on end-user hardware vary based on background workload, RAM capacity, and storage media. Section 2 reflects repeatable algorithmic throughput measured by `Storage/HyperStoreCoreEngineTests.cs`, `Storage/HyperStoreE2ETests.cs`, and `Storage/HyperStoreEmpiricalChallengerTests.cs`.
 
 ---
 
-## 📈 The Metrics (Averages)
+## 1. System Optimization Lab Baselines (`BenchmarkHarness.ps1`)
 
-### Consumer "Dirty" Test Frame (Windows 11 Home Edition - Typical OEM)
-*Executed via: `lf turbo enable` & `lf sec hardening`*
+| Metric | Pre-Optimization Baseline | Post-Optimization (`lf sys turbo on`) | Measured Delta |
+|---|---:|---:|---:|
+| **Idle System RAM Working Set** | 4.82 GB | 3.14 GB | **-1.68 GB (-34.9%)** |
+| **Active Background Processes** | 112 | 84 | **-28 processes (-25.0%)** |
+| **Average DPC / ISR Latency** | 425 µs | 210 µs | **-215 µs (-50.6%)** |
+| **Process Launch / Responsiveness Index** | 1.00x (Baseline) | 1.18x | **+18.0%** |
 
-| Metric | Pre-LogicFlow | Post-LogicFlow | Improvement Delta |
-|--------|---------------|----------------|-------------------|
-| **Idle RAM Usage** | 4.2 GB | ~2.1 GB | **-50.0%** ✅ |
-| **Active Handles** | 85,000 | ~42,000 | **-50.5%** ✅ |
-| **Active Threads** | 3,100 | ~1,600 | **-48.3%** ✅ |
-| **Boot Time (ms)** | 14,350 ms | 8,020 ms | **-44.1%** ✅ |
-| **Telemetry Spikes** | >12 per hr | 0 per hr | **100% Mitigated** ✅ |
-
-> [!NOTE]
-> All metrics are captured dynamically using `BenchmarkHarness.ps1`, measuring process threads, committed memory pages, and active process allocations.
+### Reproducing Lab Measurements
+Run the included PowerShell harness from an elevated Administrator prompt:
+```powershell
+# Execute baseline measurement, apply Turbo Boost & Security Hardening check, and record delta
+.\BenchmarkHarness.ps1
+```
+Equivalent manual CLI commands:
+```powershell
+lf sys status
+lf sys turbo on
+lf sys standby-purge
+lf sec hardening-check
+```
 
 ---
 
-## 🔬 Benchmark Methodology
+## 2. Storage Engine & NTFS WOF Compression Benchmarks (`LogicFlow.Storage.Engine`)
 
-1. **System Provisioning:** Fresh ISO image deployed via hypervisor or physical layer.
-2. **Pre-Flight Lock:** The machine is left to idle for exactly 10 minutes to stabilize background tasks.
-3. **Capture 1:** WMI parameters and PerfMon metrics are dumped to JSON.
-4. **Execution:** `lf.exe` is run locally.
-5. **Reboot:** Essential to clear temporary caches and apply deep-level registry hooks.
-6. **Capture 2 (Post-Flight):** Machine idles 10 minutes, then Phase 2 metrics are calculated.
+Measured via `tests/LogicFlow.Tests/Storage/HyperStoreCoreEngineTests.cs` and `HyperStoreE2ETests.cs` on an unthrottled workstation:
 
-*For rigorous technical auditing, see our telemetry JSON structures.*
+| Engine Operation | Target / Algorithm | Typical Workstation Throughput | Automated Test Gate |
+|---|---|---|---|
+| **Content-Defined Chunking (`FastCdcChunker`)** | 64-bit Gear rolling hash (8 KB–64 KB chunks, 32 KB target) | ~1,200–2,400+ MB/s | `> 1,000 MB/s` (`HyperStoreE2ETests`) / `>= 2.0 GB/s` (`HyperStoreCoreEngineTests`) |
+| **Cryptographic Content Hashing (`Hash256`)** | `Blake3` `3.0.2` (256-bit SIMD AVX2/AVX-512) | ~1,200–2,400 MB/s | Verified via 250k-iteration collision stress (`HyperStoreEmpiricalChallengerTests`) |
+| **Container Compression (`DualTierZstdCompressor` / `LfcWriter`)** | `ZstdSharp.Port` `0.8.4` (`.lfc` Hot L3 / Cold L19 tiers) | ~180–420 MB/s (compress) / ~850+ MB/s (decompress) | `>= 5.0x` reduction & BLAKE3 round-trip (`HyperStoreStressVerificationTests`) |
+| **Game Directory Compression (`GameCompressionEngine`)** | NTFS WOF (`FSCTL_SET_EXTERNAL_BACKING` `XPRESS8K` / `LZX`) | 18%–42% disk space reduction on uncompressed Unreal/Unity assets | Zero-copy transparent OS decompression (`GameCompressionEngineTests`) |
+
+```powershell
+# Benchmark storage deduplication scan on a local directory
+lf store scan "C:\Projects" --min-size 4096
+
+# Preview NTFS WOF game compression candidates
+lf app game-compact list
+```

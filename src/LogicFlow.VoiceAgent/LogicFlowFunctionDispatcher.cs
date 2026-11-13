@@ -30,6 +30,29 @@ public sealed class LogicFlowFunctionDispatcher
     // Module references
     private readonly JunkCleanerEngine _junkCleaner;
     private readonly SystemInfoEngine _systemInfo;
+    private readonly TurboMode _turboMode = new();
+
+    public TurboMode TurboEngine => _turboMode;
+    public Func<string, JunkCleanerEngine.CleanResult>? CustomCleanHandler { get; set; }
+
+    /// <summary>
+    /// Optional edition gate check invoked before mutating tools execute in interactive sessions.
+    /// Receives (toolName, args) and returns (Allowed, DenialMessage).
+    /// </summary>
+    public Func<string, JsonElement, (bool Allowed, string? DenialMessage)>? FeatureGateValidator { get; set; }
+
+    /// <summary>
+    /// Optional user confirmation callback invoked before mutating tools (junk_clean, network_optimize, game_mode_toggle) execute.
+    /// </summary>
+    public Func<string, JsonElement, Task<bool>>? ConfirmMutatingToolAsync { get; set; }
+
+    /// <summary>
+    /// Current edition label reported by logicflow_version.
+    /// </summary>
+    public string ActiveEditionName { get; set; } = "Community";
+
+    public static bool IsMutatingTool(string toolName) =>
+        toolName is "junk_clean" or "network_optimize" or "game_mode_toggle";
 
     public LogicFlowFunctionDispatcher(
         ILogger<LogicFlowFunctionDispatcher> log,
@@ -41,8 +64,8 @@ public sealed class LogicFlowFunctionDispatcher
         _systemInfo = systemInfo;
     }
 
-    // ── Function declarations to send to Gemini Live API ─────────────────
-    // These are injected into the LiveSetup so the model knows what tools it has.
+    // ── Function declarations to send to Gemini Live API / Gemma 4 E2B ────
+    // These are injected into the LiveSetup or Gemma tool schema so the model knows what tools it has.
 
     public static List<FunctionDeclaration> GetDeclarations() =>
     [
@@ -102,7 +125,7 @@ public sealed class LogicFlowFunctionDispatcher
         new FunctionDeclaration
         {
             Name = "game_mode_toggle",
-            Description = "Activates or deactivates High-Performance Game Mode to optimize CPU priority and RAM.",
+            Description = "Activates or deactivates High-Performance Turbo Mode (Gaming, Streaming, Rendering, Benchmarking, Minimum, Work, Battery, Server, or Smart) to optimize CPU/GPU priority, power plan, and RAM.",
             Parameters = new FunctionParameters
             {
                 Properties = new()
@@ -110,11 +133,27 @@ public sealed class LogicFlowFunctionDispatcher
                     ["enable"] = new ParameterProperty
                     {
                         Type = "boolean",
-                        Description = "True to activate Game Mode, False to deactivate."
+                        Description = "True to activate Turbo Mode, False to deactivate."
+                    },
+                    ["profile"] = new ParameterProperty
+                    {
+                        Type = "string",
+                        Description = "Optional Turbo Mode profile name when enabling.",
+                        Enum = ["Gaming", "Streaming", "Rendering", "Benchmarking", "Minimum", "Work", "Battery", "Server", "Smart"]
                     }
                 },
                 Required = ["enable"]
             }
+        },
+        new FunctionDeclaration
+        {
+            Name = "cpu_speed",
+            Description = "Returns the processor model, clock speed in GHz, core count, thread count, and current CPU utilization percentage.",
+        },
+        new FunctionDeclaration
+        {
+            Name = "gpu_info",
+            Description = "Returns dedicated GPU details including graphics adapter model, driver version, and video memory (VRAM).",
         },
         new FunctionDeclaration
         {
@@ -123,17 +162,117 @@ public sealed class LogicFlowFunctionDispatcher
         },
     ];
 
+    public static IReadOnlyList<GemmaToolDefinition> GetGemmaToolDefinitions()
+    {
+        var list = new List<GemmaToolDefinition>();
+        foreach (var decl in GetDeclarations())
+        {
+            object schema;
+            if (decl.Parameters != null)
+            {
+                var props = new Dictionary<string, object>();
+                foreach (var kv in decl.Parameters.Properties)
+                {
+                    if (kv.Value.Enum is { Count: > 0 })
+                    {
+                        props[kv.Key] = new { type = kv.Value.Type, description = kv.Value.Description, @enum = kv.Value.Enum };
+                    }
+                    else
+                    {
+                        props[kv.Key] = new { type = kv.Value.Type, description = kv.Value.Description };
+                    }
+                }
+                schema = new
+                {
+                    type = "object",
+                    properties = props,
+                    required = decl.Parameters.Required ?? new List<string>()
+                };
+            }
+            else
+            {
+                schema = new { type = "object", properties = new Dictionary<string, object>() };
+            }
+
+            list.Add(new GemmaToolDefinition
+            {
+                Name = decl.Name,
+                Description = decl.Description,
+                ParametersSchema = schema
+            });
+        }
+        return list;
+    }
+
+    public static List<JunkCleanerEngine.JunkScanResult> FilterScanResultsByScope(
+        List<JunkCleanerEngine.JunkScanResult> scanResults,
+        string? scope)
+    {
+        var normalized = string.IsNullOrWhiteSpace(scope) ? "full" : scope.Trim().ToLowerInvariant();
+        foreach (var item in scanResults)
+        {
+            item.IsSelected = normalized switch
+            {
+                "temp_only" => item.Category is JunkCleanerEngine.JunkCategory.WindowsTemp
+                    or JunkCleanerEngine.JunkCategory.UserTemp
+                    or JunkCleanerEngine.JunkCategory.InstallerCache,
+                "browser_only" => item.Category == JunkCleanerEngine.JunkCategory.BrowserCache,
+                _ => item.IsSafeCategory
+            };
+        }
+        return scanResults;
+    }
+
     // ── Dispatch incoming function calls ──────────────────────────────────
 
     public async Task<object> DispatchAsync(FunctionCall call)
     {
         _log.LogInformation("[VoiceAgent] Dispatching: {Name} args={Args}", call.Name, call.Args);
 
+        if (IsMutatingTool(call.Name))
+        {
+            if (FeatureGateValidator != null)
+            {
+                var (allowed, denialMsg) = FeatureGateValidator(call.Name, call.Args);
+                if (!allowed)
+                {
+                    string msg = !string.IsNullOrWhiteSpace(denialMsg)
+                        ? denialMsg!
+                        : $"'{call.Name}' requires LogicFlow Community ($0) or Pro edition.";
+                    _log.LogInformation("[VoiceAgent] Blocked gated tool {Name}: {Reason}", call.Name, msg);
+                    return new
+                    {
+                        cancelled = true,
+                        gated = true,
+                        error = msg,
+                        summary = msg
+                    };
+                }
+            }
+
+            if (ConfirmMutatingToolAsync != null)
+            {
+                bool confirmed = await ConfirmMutatingToolAsync(call.Name, call.Args).ConfigureAwait(false);
+                if (!confirmed)
+                {
+                    string cancelMsg = $"Cancelled '{call.Name}' — action was declined by the user.";
+                    _log.LogInformation("[VoiceAgent] User declined mutating tool {Name}", call.Name);
+                    return new
+                    {
+                        cancelled = true,
+                        summary = cancelMsg
+                    };
+                }
+            }
+        }
+
         return call.Name switch
         {
             "junk_scan"       => await JunkScanAsync(),
             "junk_clean"      => await JunkCleanAsync(call.Args),
             "system_overview" => await SystemOverviewAsync(),
+            "cpu_speed"       => await CpuSpeedAsync(),
+            "gpu_info"        => await GpuInfoAsync(),
             "disk_health"     => await DiskHealthAsync(),
             "memory_status"   => await MemoryStatusAsync(),
             "startup_analysis"=> await StartupAnalysisAsync(),
@@ -176,19 +315,41 @@ public sealed class LogicFlowFunctionDispatcher
 
     private async Task<object> JunkCleanAsync(JsonElement args)
     {
-        var scope = args.TryGetProperty("scope", out var s) ? s.GetString() ?? "full" : "full";
-        _log.LogWarning("[VoiceAgent] Executing junk CLEAN with scope={Scope}", scope);
+        var scope = args.ValueKind == JsonValueKind.Object && args.TryGetProperty("scope", out var s)
+            ? (s.GetString() ?? "full")
+            : "full";
+        var normalizedScope = scope.Trim().ToLowerInvariant();
+        _log.LogWarning("[VoiceAgent] Executing junk CLEAN with scope={Scope}", normalizedScope);
 
         try
         {
-            var result = await Task.Run(() => _junkCleaner.QuickClean());
+            JunkCleanerEngine.CleanResult result;
+            if (CustomCleanHandler != null)
+            {
+                result = CustomCleanHandler(normalizedScope);
+            }
+            else if (normalizedScope is "temp_only" or "browser_only")
+            {
+                result = await Task.Run(() =>
+                {
+                    var scanned = _junkCleaner.Scan();
+                    FilterScanResultsByScope(scanned, normalizedScope);
+                    return _junkCleaner.Clean(scanned);
+                });
+            }
+            else
+            {
+                result = await Task.Run(() => _junkCleaner.QuickClean());
+            }
+
             return new
             {
+                scope = normalizedScope,
                 bytes_freed = result.BytesCleaned,
                 gb_freed    = Math.Round(result.BytesCleaned / 1_073_741_824.0, 2),
                 files_deleted = result.FilesDeleted,
                 summary = $"Cleaned {Math.Round(result.BytesCleaned / 1_073_741_824.0, 1)} GB " +
-                          $"({result.FilesDeleted} files)."
+                          $"({result.FilesDeleted} files, scope: {normalizedScope})."
             };
         }
         catch (Exception ex)
@@ -227,41 +388,93 @@ public sealed class LogicFlowFunctionDispatcher
 
     private async Task<object> DiskHealthAsync()
     {
-        // Stub — wires to SmartDiskReader from LogicFlow.Native
-        await Task.CompletedTask;
-        return new
+        try
         {
-            status  = "healthy",
-            drives  = 1,
-            summary = "All drives are healthy. No SMART warnings detected."
-        };
+            var diskHealth = new SmartDiskHealth();
+            var drives = await Task.Run(() => diskHealth.ScanDrives());
+            int healthy = drives.Count(d => d.Status == SmartDiskHealth.DiskHealthStatus.Healthy);
+            int warning = drives.Count(d => d.Status == SmartDiskHealth.DiskHealthStatus.Warning);
+            int critical = drives.Count(d => d.Status == SmartDiskHealth.DiskHealthStatus.Critical);
+
+            return new
+            {
+                status = critical > 0 ? "critical" : (warning > 0 ? "warning" : "healthy"),
+                total_drives = drives.Count,
+                healthy_count = healthy,
+                warning_count = warning,
+                critical_count = critical,
+                drives = drives.Select(d => new
+                {
+                    model = d.Model,
+                    letter = d.DriveLetter,
+                    health_score = d.HealthScore,
+                    grade = d.HealthGrade,
+                    status = d.Status.ToString(),
+                    temperature_c = d.Temperature,
+                    size = d.SizeFormatted
+                }).ToArray(),
+                summary = drives.Count == 0
+                    ? "No physical drives detected."
+                    : $"Scanned {drives.Count} drive(s): {healthy} healthy, {warning} warning, {critical} critical."
+            };
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "[VoiceAgent] disk_health failed");
+            return new { error = ex.Message };
+        }
     }
 
     private async Task<object> MemoryStatusAsync()
     {
-        await Task.CompletedTask;
-        var gc = GC.GetGCMemoryInfo();
-        var totalMb  = gc.TotalAvailableMemoryBytes / (1024.0 * 1024);
-        var usedMb   = (gc.TotalAvailableMemoryBytes - gc.MemoryLoadBytes) / (1024.0 * 1024);
-        return new
+        try
         {
-            total_mb   = Math.Round(totalMb, 0),
-            used_mb    = Math.Round(usedMb, 0),
-            pressure   = totalMb > 0 ? Math.Round((1 - (double)gc.MemoryLoadBytes / gc.TotalAvailableMemoryBytes) * 100, 0) : 0,
-            summary    = $"RAM: {Math.Round(usedMb / 1024, 1)} GB used of {Math.Round(totalMb / 1024, 1)} GB total."
-        };
+            var info = await Task.Run(() => _systemInfo.CollectSnapshot());
+            var totalMb = Math.Round(info.TotalRamBytes / (1024.0 * 1024.0), 0);
+            var usedMb = Math.Round((info.TotalRamBytes - info.AvailableRamBytes) / (1024.0 * 1024.0), 0);
+            return new
+            {
+                total_mb = totalMb,
+                used_mb = usedMb,
+                available_mb = Math.Round(info.AvailableRamBytes / (1024.0 * 1024.0), 0),
+                pressure = info.RamUsagePercent,
+                summary = $"RAM: {info.UsedRamFormatted} used of {info.TotalRamFormatted} total ({info.RamUsagePercent}%)."
+            };
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "[VoiceAgent] memory_status failed");
+            return new { error = ex.Message };
+        }
     }
 
     private async Task<object> StartupAnalysisAsync()
     {
-        await Task.CompletedTask;
-        // Stub — wires to StartupOptimizer from LogicFlow.Native
-        return new
+        try
         {
-            total_items    = 0,
-            high_impact    = 0,
-            summary        = "Startup analysis requires the full LogicFlow engine. Running in limited voice mode."
-        };
+            var optimizer = new StartupOptimizer(Microsoft.Extensions.Logging.Abstractions.NullLogger<StartupOptimizer>.Instance);
+            var items = await Task.Run(() => optimizer.AnalyzeStartupItems());
+            var highImpact = items.Where(i => i.ImpactScore >= 7).ToList();
+
+            return new
+            {
+                total_items = items.Count,
+                high_impact_count = highImpact.Count,
+                items = items.Select(i => new
+                {
+                    name = i.Name,
+                    command = i.Command,
+                    impact = i.ImpactScore,
+                    source = i.Source
+                }).ToArray(),
+                summary = $"Found {items.Count} startup programs ({highImpact.Count} high-impact on boot times)."
+            };
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "[VoiceAgent] startup_analysis failed");
+            return new { error = ex.Message };
+        }
     }
 
     private async Task<object> DriverScanAsync()
@@ -308,27 +521,50 @@ public sealed class LogicFlowFunctionDispatcher
     {
         try
         {
-            var enable = args.TryGetProperty("enable", out var e) && e.GetBoolean();
-            var gameMode = new LogicFlow.Sentinel.GameModeEngine();
+            bool enable = args.ValueKind == JsonValueKind.Object && args.TryGetProperty("enable", out var e) &&
+                (e.ValueKind == JsonValueKind.True || (e.ValueKind == JsonValueKind.String && bool.TryParse(e.GetString(), out var b) && b));
+            string? profileName = args.ValueKind == JsonValueKind.Object && args.TryGetProperty("profile", out var p)
+                ? p.GetString()
+                : null;
 
             if (enable)
             {
-                var status = await Task.Run(() => gameMode.ActivateGameMode());
+                TurboMode.TurboProfile profile;
+                string? smartRationale = null;
+                if (string.Equals(profileName, "Smart", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(profileName, "auto", StringComparison.OrdinalIgnoreCase))
+                {
+                    var rec = await _turboMode.RecommendSmartProfileAsync();
+                    profile = rec.Profile;
+                    smartRationale = rec.Rationale;
+                }
+                else
+                {
+                    profile = TurboMode.GetProfileByName(profileName);
+                }
+
+                var result = await Task.Run(() => _turboMode.Activate(profile));
                 return new
                 {
-                    active = status.IsActive,
-                    power_scheme = status.ActivePowerScheme,
-                    services_paused = status.PausedServiceCount,
-                    summary = "High-Performance Game Mode activated. Power scheme set to High Performance and background telemetry paused."
+                    active = _turboMode.IsActive,
+                    activated = result.Activated,
+                    profile = profile.Name,
+                    smart_rationale = smartRationale,
+                    services_paused = result.ServicesDisabled,
+                    processes_stopped = result.ProcessesKilled,
+                    memory_freed = result.MemoryFreedFormatted,
+                    actions = result.Actions,
+                    summary = $"{profile.Name} activated ({result.ServicesDisabled} services stopped, {result.ProcessesKilled} processes stopped, {result.MemoryFreedFormatted} RAM freed)."
                 };
             }
             else
             {
-                var status = await Task.Run(() => gameMode.DeactivateGameMode());
+                var result = await Task.Run(() => _turboMode.Deactivate());
                 return new
                 {
-                    active = false,
-                    summary = "Game Mode deactivated. Normal system power scheme and background services restored."
+                    active = _turboMode.IsActive,
+                    actions = result.Actions,
+                    summary = "Turbo Mode deactivated. Normal system power scheme and background services restored."
                 };
             }
         }
@@ -338,11 +574,57 @@ public sealed class LogicFlowFunctionDispatcher
         }
     }
 
-    private static object GetVersion() => new
+    private async Task<object> CpuSpeedAsync()
+    {
+        try
+        {
+            var info = await Task.Run(() => _systemInfo.CollectSnapshot());
+            return new
+            {
+                cpu_name = info.CpuName,
+                clock_speed_ghz = info.CpuSpeedGHz,
+                base_speed_ghz = info.CpuSpeedGHz,
+                cores = info.CpuCores,
+                threads = info.CpuThreads,
+                usage_percent = info.CpuUsagePercent,
+                temperature_c = info.CpuTempCelsius,
+                summary = $"{info.CpuName} ({info.CpuCores} Cores, {info.CpuThreads} Threads) running at {info.CpuSpeedGHz:F2} GHz (Base Speed: {info.CpuSpeedGHz:F2} GHz), load: {info.CpuUsagePercent:F0}%."
+            };
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "[VoiceAgent] cpu_speed failed");
+            return new { error = ex.Message };
+        }
+    }
+
+    private async Task<object> GpuInfoAsync()
+    {
+        try
+        {
+            var info = await Task.Run(() => _systemInfo.CollectSnapshot());
+            return new
+            {
+                gpu_name = info.GpuName,
+                driver_version = info.GpuDriverVersion,
+                vram = info.GpuVramFormatted,
+                summary = string.IsNullOrWhiteSpace(info.GpuName)
+                    ? "No dedicated GPU detected or integrated graphics active."
+                    : $"{info.GpuName} (VRAM: {info.GpuVramFormatted}, Driver: {info.GpuDriverVersion})"
+            };
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "[VoiceAgent] gpu_info failed");
+            return new { error = ex.Message };
+        }
+    }
+
+    private object GetVersion() => new
     {
         version = "1.0.0",
-        edition = "Community",
-        build   = "logicflow-voice-preview",
-        summary = "LogicFlow 1.0.0 Community Edition with Voice Agent preview."
+        edition = ActiveEditionName,
+        build   = "logicflow-v1.0",
+        summary = $"LogicFlow 1.0.0 {ActiveEditionName} Edition."
     };
 }

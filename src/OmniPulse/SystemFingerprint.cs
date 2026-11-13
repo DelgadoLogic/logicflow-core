@@ -1,67 +1,50 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// OmniPulse — Anonymous System Fingerprint
-// Collects hardware/software profile without any personally identifiable info.
-// No usernames, no file paths, no IP addresses, no browsing data.
+﻿// ─────────────────────────────────────────────────────────────────────────────
+// OmniPulse — Pseudonymous System Fingerprint
+// Collects a hardware/software profile without usernames, file paths, IP addresses
+// or browsing data. Identified only by a random, rotatable install ID.
 // ─────────────────────────────────────────────────────────────────────────────
 
 using System.Management;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace OmniPulse;
 
 /// <summary>
-/// Generates an anonymous system profile and a stable install ID.
-/// The install ID is a one-way hash — cannot be reversed to identify a user.
+/// Generates a pseudonymous system profile. The install ID comes from the consent store
+/// (random, never derived from hardware, rotatable/deletable by the user).
 /// </summary>
 public sealed class SystemFingerprint
 {
     private readonly ILogger<SystemFingerprint>? _logger;
-    private readonly string _installIdPath;
+    private readonly Func<string>? _installIdProvider;
 
-    public SystemFingerprint(ILogger<SystemFingerprint>? logger = null)
+    public SystemFingerprint(ILogger<SystemFingerprint>? logger = null, Func<string>? installIdProvider = null)
     {
         _logger = logger;
-        var appData = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LogicFlow");
-        Directory.CreateDirectory(appData);
-        _installIdPath = Path.Combine(appData, ".install_id");
+        _installIdProvider = installIdProvider;
     }
 
-    /// <summary>
-    /// Returns a stable, anonymous install ID (persists across sessions).
-    /// Generated from a random GUID on first run — NOT tied to hardware.
-    /// </summary>
+    /// <summary>Returns the random install ID supplied by the consent store ("unknown" if unavailable).</summary>
     public string GetInstallId()
     {
         try
         {
-            if (File.Exists(_installIdPath))
-                return File.ReadAllText(_installIdPath).Trim();
-
-            // Generate new random ID and hash it for extra anonymity
-            var rawId = Guid.NewGuid().ToString("N");
-            var hashedId = Convert.ToHexString(
-                SHA256.HashData(Encoding.UTF8.GetBytes(rawId)))[..32].ToLowerInvariant();
-            File.WriteAllText(_installIdPath, hashedId);
-            return hashedId;
+            var id = _installIdProvider?.Invoke();
+            return string.IsNullOrWhiteSpace(id) ? "unknown" : id;
         }
         catch (Exception ex)
         {
-            _logger?.LogDebug(ex, "Failed to read/create install ID");
+            _logger?.LogDebug(ex, "Failed to read install ID");
             return "unknown";
         }
     }
-
     /// <summary>
-    /// Collects an anonymous system profile. Zero PII.
+    /// Collects a pseudonymous system profile (no usernames, paths or IPs).
     /// </summary>
     public SystemProfile Capture()
     {
-        _logger?.LogDebug("Capturing anonymous system profile");
+        _logger?.LogDebug("Capturing Pseudonymous system profile");
         var profile = new SystemProfile();
 
         try

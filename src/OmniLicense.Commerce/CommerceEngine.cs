@@ -1,7 +1,8 @@
-// OmniLicense.Commerce — Universal PayPal Commerce Engine
-// Proprietary implementation by DelgadoLogic.Tech
+// OmniLicense.Commerce — PayPal Commerce Engine (server-side tooling)
+// Delgado Creative Enterprises LLC d/b/a DelgadoLogic
 // Handles one-time purchases (LogicFlow Pro) AND subscriptions (Aeon Pro)
-// via PayPal Orders API v2 + Subscriptions API
+// via PayPal Orders API v2 + Subscriptions API.
+// NOTE: never ship PayPal credentials in the client. Credentials come from environment variables only.
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,16 +11,9 @@ using Microsoft.Extensions.Logging;
 namespace OmniLicense.Commerce;
 
 /// <summary>
-/// Universal PayPal commerce service for all DelgadoLogic products.
-/// 
-/// LogicFlow Pro:        $29.99 one-time — 2 devices, lifetime sovereign updates.
-/// LogicFlow Family:     $49.99 one-time — 5 devices, lifetime sovereign updates.
-/// LogicFlow Enterprise: $79.99 one-time — 10 devices, seat add-ons, priority support.
-/// Enterprise Seat Addon: $9.99 one-time — add 1 extra seat to Enterprise license.
-/// Aeon Pro Monthly:     $4.99/month subscription.
-/// Aeon Pro Annual:      $39.00/year subscription.
-/// 
-/// 7-day refund guarantee on all purchases.
+/// PayPal commerce service. Prices come from <see cref="PriceSheet"/>:
+/// LogicFlow Pro $29.99 one-time (3 devices, free v1.x updates), launch offer $19.99 for the first 60 days,
+/// extra seat $9.99, Team 10-pack $149, paid v2 upgrade $14.99. 60-day refund.
 /// New products are added by creating ProductInfo or SubscriptionPlan entries.
 /// </summary>
 public sealed class CommerceEngine
@@ -44,6 +38,11 @@ public sealed class CommerceEngine
     private async Task EnsureAuthenticatedAsync(CancellationToken ct)
     {
         if (_accessToken != null && _tokenExpiry > DateTimeOffset.UtcNow) return;
+
+        if (!_config.IsConfigured)
+            throw new InvalidOperationException(
+                $"PayPal credentials are not configured. Set {PayPalConfig.ClientIdVar} and {PayPalConfig.ClientSecretVar} " +
+                "(server-side only; the desktop client must route checkout through the backend API).");
 
         var authStr = Convert.ToBase64String(
             System.Text.Encoding.UTF8.GetBytes($"{_config.ClientId}:{_config.ClientSecret}"));
@@ -74,15 +73,8 @@ public sealed class CommerceEngine
         await EnsureAuthenticatedAsync(ct);
 
         var unitPrice = product.Price;
+        // discountCode is accepted for API compatibility; no codes are defined in the v1.0 price sheet.
         string? appliedDiscount = null;
-
-        // Apply MULTIPC discount code if valid (LogicFlow multi-PC)
-        if (!string.IsNullOrWhiteSpace(discountCode) &&
-            discountCode.Equals("MULTIPC", StringComparison.OrdinalIgnoreCase))
-        {
-            unitPrice = Math.Round(unitPrice * 0.80m, 2);
-            appliedDiscount = "MULTIPC";
-        }
 
         var order = new
         {
@@ -117,7 +109,7 @@ public sealed class CommerceEngine
             },
             application_context = new
             {
-                brand_name = "DelgadoLogic Systems",
+                brand_name = PriceSheet.Brand,
                 landing_page = "BILLING",
                 user_action = "PAY_NOW",
                 return_url = product.ReturnUrl,
@@ -306,57 +298,59 @@ public sealed class CommerceEngine
     //  PRODUCT CATALOG — All DelgadoLogic Products
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>All purchasable products across the DelgadoLogic ecosystem.</summary>
+    /// <summary>All purchasable products. Prices and limits come from <see cref="PriceSheet"/> only.</summary>
     public static class Products
     {
-        // ── LogicFlow Pro ──
-        // $29.99 one-time for 2 devices (desktop + laptop).
-        // Undercuts every competitor's annual subscription model.
+        private const string Success = PriceSheet.SiteBase + "/success";
+        private const string Cancel = PriceSheet.SiteBase + "/pricing";
+
+        // ── LogicFlow Pro: one-time, 3 devices, free updates for every v1.x release ──
         public static readonly ProductInfo LogicFlowPro = new(
             Name: "LogicFlow Pro",
-            Description: "All 12 modules unlocked — 2 devices, lifetime sovereign updates, zero subscriptions. Windows 7 SP1 through Windows 11.",
-            Price: 29.99m,
+            Description: $"LogicFlow Pro — {PriceSheet.ProDevices} devices, commercial use, background automation, advanced recovery, " +
+                         $"{PriceSheet.UpdatesPolicy.ToLowerInvariant()}. Windows 10 (1607+) and Windows 11.",
+            Price: PriceSheet.ProPrice,
             ReferencePrefix: "LF-PRO",
-            ReturnUrl: "https://delgadologic.tech/success",
-            CancelUrl: "https://delgadologic.tech/pricing"
+            ReturnUrl: Success,
+            CancelUrl: Cancel
         );
 
-        // ── LogicFlow Family ──
-        // $49.99 one-time for 5 devices.
-        // ~$10/device — perfect for households.
-        // 67% premium over Pro but 2.5× the seats.
-        public static readonly ProductInfo LogicFlowFamily = new(
-            Name: "LogicFlow Family",
-            Description: "5-device license — all modules, lifetime sovereign updates, perfect for households. Windows 7 SP1 through Windows 11.",
-            Price: 49.99m,
-            ReferencePrefix: "LF-FAM",
-            ReturnUrl: "https://delgadologic.tech/success",
-            CancelUrl: "https://delgadologic.tech/pricing"
+        // ── Launch promo: same product, first PriceSheet.LaunchPromoDays days after launch ──
+        public static readonly ProductInfo LogicFlowProLaunch = LogicFlowPro with
+        {
+            Name = "LogicFlow Pro (Launch Offer)",
+            Price = PriceSheet.ProLaunchPrice,
+            ReferencePrefix = "LF-PRO-LAUNCH"
+        };
+
+        // ── Team 10-pack: 10 seats, one-time ──
+        public static readonly ProductInfo LogicFlowTeam10 = new(
+            Name: "LogicFlow Pro — Team 10-Pack",
+            Description: $"{PriceSheet.Team10PackSeats} Pro seats for a team or small business, one-time, {PriceSheet.UpdatesPolicy.ToLowerInvariant()}.",
+            Price: PriceSheet.Team10PackPrice,
+            ReferencePrefix: "LF-TEAM10",
+            ReturnUrl: Success,
+            CancelUrl: Cancel
         );
 
-        // ── LogicFlow Enterprise ──
-        // $79.99 one-time for 10 devices.
-        // ~$8/device — undercuts CCleaner Business ($20/PC/yr) and IObit ($17/yr/3PC).
-        // Includes expandable seat add-ons at $9.99/seat.
-        public static readonly ProductInfo LogicFlowEnterprise = new(
-            Name: "LogicFlow Enterprise",
-            Description: "10-device license — all modules, lifetime sovereign updates, Oracle Voice (3h/mo), priority support, expandable seats. Windows 7 SP1 through Windows 11.",
-            Price: 79.99m,
-            ReferencePrefix: "LF-ENT",
-            ReturnUrl: "https://delgadologic.tech/success",
-            CancelUrl: "https://delgadologic.tech/pricing"
-        );
-
-        // ── Enterprise Seat Add-on ──
-        // $9.99 per additional seat beyond the base 10.
-        // Enterprise-only. Each add-on purchase increases the license's seat count by 1.
+        // ── Extra seat for an existing Pro or Team license ──
         public static readonly ProductInfo LogicFlowSeatAddon = new(
-            Name: "LogicFlow Enterprise — Extra Seat",
-            Description: "Add 1 additional device to your Enterprise license. Stacks with existing seats.",
-            Price: 9.99m,
+            Name: "LogicFlow Pro — Extra Seat",
+            Description: "Add 1 additional device to an existing Pro or Team license.",
+            Price: PriceSheet.ExtraSeatPrice,
             ReferencePrefix: "LF-SEAT",
-            ReturnUrl: "https://delgadologic.tech/success",
-            CancelUrl: "https://delgadologic.tech/pricing"
+            ReturnUrl: Success,
+            CancelUrl: Cancel
+        );
+
+        // ── Paid upgrade to the next major version (v2) for v1 Pro owners ──
+        public static readonly ProductInfo LogicFlowV2Upgrade = new(
+            Name: "LogicFlow Pro v2 — Upgrade",
+            Description: "Upgrade from LogicFlow Pro v1.x to v2.",
+            Price: PriceSheet.V2UpgradePrice,
+            ReferencePrefix: "LF-V2UP",
+            ReturnUrl: Success,
+            CancelUrl: Cancel
         );
     }
 
@@ -414,12 +408,41 @@ public sealed class WebhookHandler
 //  DATA MODELS
 // ═══════════════════════════════════════════════════════════════════
 
+/// <summary>
+/// PayPal REST configuration. No credentials are compiled into the assembly.
+/// Values are loaded from environment variables (or a secret manager that exports them) by server-side tooling.
+/// The shipped desktop client must NOT use <see cref="CommerceEngine"/>; checkout and licence activation are routed
+/// through the DelgadoLogic backend API, which owns the PayPal credentials.
+/// </summary>
 public sealed class PayPalConfig
 {
-    public string ClientId { get; set; } = "AYGnJkdA6DBy9Muhnk07u9YGT6ExOzT7Q57b0RYbb1lnEe3rAY1qL8dY3RqA__fvf9ZG-LeMefwkZtcd";
-    public string ClientSecret { get; set; } = "EGwozLJAVcbELXybrYqFkgOAXKxdXggyH6RB9HACKQzcOYNRhQg9Sf2hSxbCRec9zJGa_ZsuPdsgBiw2";
+    public const string ClientIdVar = "LOGICFLOW_PAYPAL_CLIENT_ID";
+    public const string ClientSecretVar = "LOGICFLOW_PAYPAL_CLIENT_SECRET";
+    public const string WebhookIdVar = "LOGICFLOW_PAYPAL_WEBHOOK_ID";
+    public const string BaseUrlVar = "LOGICFLOW_PAYPAL_BASE_URL";
+
+    public string ClientId { get; set; } = "";
+    public string ClientSecret { get; set; } = "";
     public string BaseUrl { get; set; } = "https://api-m.paypal.com";
-    public string WebhookId { get; set; } = "8B573547EK930032N";
+    public string WebhookId { get; set; } = "";
+
+    /// <summary>True when both the client id and secret are present.</summary>
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
+
+    /// <summary>Builds a configuration from environment variables. Missing values stay empty (fail closed).</summary>
+    public static PayPalConfig FromEnvironment(Func<string, string?>? getVar = null)
+    {
+        getVar ??= Environment.GetEnvironmentVariable;
+        var baseUrl = getVar(BaseUrlVar);
+        return new PayPalConfig
+        {
+            ClientId = getVar(ClientIdVar)?.Trim() ?? "",
+            ClientSecret = getVar(ClientSecretVar)?.Trim() ?? "",
+            WebhookId = getVar(WebhookIdVar)?.Trim() ?? "",
+            BaseUrl = string.IsNullOrWhiteSpace(baseUrl) ? "https://api-m.paypal.com" : baseUrl.Trim()
+        };
+    }
 }
 
 /// <summary>A one-time purchasable product (LogicFlow Pro, Aeon Lifetime).</summary>

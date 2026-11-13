@@ -7,10 +7,10 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>LogicFlow Native Interop — P/Invoke, S.M.A.R.T., Crypto CNG, kernel driver stubs</Description>
-    <Company>DelgadoLogic.Tech</Company>
+    <Company>Delgado Creative Enterprises LLC d/b/a DelgadoLogic</Company>
     <Product>LogicFlow</Product>
     <Version>1.0.0</Version>
-    <Copyright>© 2026 DelgadoLogic.Tech. All rights reserved.</Copyright>
+    <Copyright>Copyright (c) 2026 Delgado Creative Enterprises LLC d/b/a DelgadoLogic. All rights reserved.</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\OmniCore.Engine\OmniCore.Engine.csproj" />

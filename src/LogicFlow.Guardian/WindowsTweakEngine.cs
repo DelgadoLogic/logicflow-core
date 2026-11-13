@@ -72,7 +72,15 @@ namespace LogicFlow.Guardian
         internal static void Set(string fullPath, string name, object value, RegistryValueKind kind = RegistryValueKind.DWord)
         {
             try { Registry.SetValue(fullPath, name, value, kind); }
-            catch { /* swallow — key may be protected */ }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new UnauthorizedAccessException($"Access denied writing to '{fullPath}\\{name}'. Administrator privileges are required to apply this tweak.", ex);
+            }
+            catch (System.Security.SecurityException ex)
+            {
+                throw new UnauthorizedAccessException($"Insufficient permissions to write to '{fullPath}\\{name}'. Administrator privileges are required.", ex);
+            }
+            catch { /* swallow non-permission errors */ }
         }
 
         internal static void SetHKLM(string subKey, string name, object value, RegistryValueKind kind = RegistryValueKind.DWord)
@@ -97,6 +105,14 @@ namespace LogicFlow.Guardian
             {
                 using var key = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64).OpenSubKey(path, true);
                 key?.DeleteValue(name, false);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new UnauthorizedAccessException($"Access denied deleting value '{name}' from '{hive}\\{path}'. Administrator privileges are required.", ex);
+            }
+            catch (System.Security.SecurityException ex)
+            {
+                throw new UnauthorizedAccessException($"Insufficient permissions to delete '{name}' from '{hive}\\{path}'. Administrator privileges are required.", ex);
             }
             catch { /* swallow */ }
         }
@@ -137,34 +153,44 @@ namespace LogicFlow.Guardian
             catch { return false; }
         }
 
-        internal static void StopService(string name)
+        internal static bool StopService(string name)
         {
             try
             {
-                if (!ServiceExists(name)) return;
+                if (!ServiceExists(name)) return false;
                 using var sc = new ServiceController(name);
                 if (sc.Status == ServiceControllerStatus.Running)
                 {
                     sc.Stop();
-                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
+                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(5));
+                    return true;
                 }
+                return false;
             }
-            catch { /* swallow */ }
+            catch
+            {
+                return false;
+            }
         }
 
-        internal static void StartService(string name)
+        internal static bool StartService(string name)
         {
             try
             {
-                if (!ServiceExists(name)) return;
+                if (!ServiceExists(name)) return false;
                 using var sc = new ServiceController(name);
                 if (sc.Status == ServiceControllerStatus.Stopped)
                 {
                     sc.Start();
-                    sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
+                    sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(5));
+                    return true;
                 }
+                return false;
             }
-            catch { /* swallow */ }
+            catch
+            {
+                return false;
+            }
         }
 
         internal static void RunCommand(string command)
@@ -240,6 +266,16 @@ namespace LogicFlow.Guardian
                 tweak.IsApplied = true;
                 return new TweakResult { TweakId = tweakId, TweakName = tweak.Name, Success = true };
             }
+            catch (UnauthorizedAccessException uex)
+            {
+                return new TweakResult
+                {
+                    TweakId = tweakId,
+                    TweakName = tweak.Name,
+                    Success = false,
+                    Error = $"Administrator privileges required to modify system settings: {uex.Message}"
+                };
+            }
             catch (Exception ex)
             {
                 return new TweakResult { TweakId = tweakId, TweakName = tweak.Name, Success = false, Error = ex.Message };
@@ -256,6 +292,16 @@ namespace LogicFlow.Guardian
                 tweak.Revert?.Invoke();
                 tweak.IsApplied = false;
                 return new TweakResult { TweakId = tweakId, TweakName = tweak.Name, Success = true };
+            }
+            catch (UnauthorizedAccessException uex)
+            {
+                return new TweakResult
+                {
+                    TweakId = tweakId,
+                    TweakName = tweak.Name,
+                    Success = false,
+                    Error = $"Administrator privileges required to revert system settings: {uex.Message}"
+                };
             }
             catch (Exception ex)
             {
@@ -426,6 +472,30 @@ namespace LogicFlow.Guardian
                     RegHelper.TryDeleteValue(RegistryHive.LocalMachine, @"SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot", "TurnOffWindowsCopilot");
                 },
                 QueryState = () => RegHelper.GetDword(RegistryHive.CurrentUser, @"Software\Policies\Microsoft\Windows\WindowsCopilot", "TurnOffWindowsCopilot") == 1
+            });
+
+            _tweaks.Add(new SystemTweak
+            {
+                Id = "privacy.recall",
+                Name = "Disable Windows Recall (Snapshot Indexing)",
+                Description = "Disables Windows Recall background snapshot recording and local AI vision index analysis.",
+                Category = TweakCategory.Privacy,
+                Safety = SafetyLevel.Safe,
+                Apply = () =>
+                {
+                    RegHelper.SetHKCU(@"Software\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis", 1);
+                    RegHelper.SetHKLM(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis", 1);
+                    RegHelper.SetHKCU(@"Software\Policies\Microsoft\Windows\WindowsAI", "AllowRecallEnabled", 0);
+                    RegHelper.SetHKLM(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "AllowRecallEnabled", 0);
+                },
+                Revert = () =>
+                {
+                    RegHelper.TryDeleteValue(RegistryHive.CurrentUser, @"Software\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis");
+                    RegHelper.TryDeleteValue(RegistryHive.LocalMachine, @"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis");
+                    RegHelper.TryDeleteValue(RegistryHive.CurrentUser, @"Software\Policies\Microsoft\Windows\WindowsAI", "AllowRecallEnabled");
+                    RegHelper.TryDeleteValue(RegistryHive.LocalMachine, @"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "AllowRecallEnabled");
+                },
+                QueryState = () => RegHelper.GetDword(RegistryHive.CurrentUser, @"Software\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis") == 1
             });
 
             _tweaks.Add(new SystemTweak
@@ -990,6 +1060,40 @@ namespace LogicFlow.Guardian
                 Apply = () => RegHelper.SetHKLM(@"SOFTWARE\Policies\Microsoft\Dsh", "AllowNewsAndInterests", 0),
                 Revert = () => RegHelper.TryDeleteValue(RegistryHive.LocalMachine, @"SOFTWARE\Policies\Microsoft\Dsh", "AllowNewsAndInterests"),
                 QueryState = () => RegHelper.GetDword(RegistryHive.LocalMachine, @"SOFTWARE\Policies\Microsoft\Dsh", "AllowNewsAndInterests") == 0
+            });
+
+            _tweaks.Add(new SystemTweak
+            {
+                Id = "visual.classic_context_menu",
+                Name = "Restore Windows 10 Classic Context Menu (Win 11)",
+                Description = "Restores the full instant right-click context menu in File Explorer on Windows 11, eliminating 'Show more options'.",
+                Category = TweakCategory.Visual,
+                Safety = SafetyLevel.Safe,
+                RequiresReboot = false,
+                Apply = () =>
+                {
+                    RegHelper.SetHKCU(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32", "", "", RegistryValueKind.String);
+                    SvcHelper.RunCommand("taskkill /f /im explorer.exe & start explorer.exe");
+                },
+                Revert = () =>
+                {
+                    try
+                    {
+                        using var clsid = Registry.CurrentUser.OpenSubKey(@"Software\Classes\CLSID", true);
+                        clsid?.DeleteSubKeyTree("{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}", false);
+                    }
+                    catch { /* swallow */ }
+                    SvcHelper.RunCommand("taskkill /f /im explorer.exe & start explorer.exe");
+                },
+                QueryState = () =>
+                {
+                    try
+                    {
+                        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32");
+                        return key != null;
+                    }
+                    catch { return false; }
+                }
             });
         }
 

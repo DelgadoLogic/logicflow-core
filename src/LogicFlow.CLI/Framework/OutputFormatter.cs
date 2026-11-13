@@ -7,43 +7,46 @@ namespace LogicFlow.CLI.Framework
     {
         public static void Write(CliContext ctx, string message, object? jsonModel = null, ConsoleColor color = ConsoleColor.White)
         {
+            var writer = ctx.StdOutOverride ?? Console.Out;
             if (ctx.IsJson)
             {
                 if (jsonModel != null)
                 {
                     string json = JsonSerializer.Serialize(jsonModel, new JsonSerializerOptions { WriteIndented = true });
-                    Console.WriteLine(json);
+                    writer.WriteLine(json);
                 }
                 return;
             }
 
             if (!ctx.IsSilent)
             {
-                Console.ForegroundColor = color;
-                Console.WriteLine(message);
-                Console.ResetColor();
+                if (ctx.StdOutOverride == null) Console.ForegroundColor = color;
+                writer.WriteLine(message);
+                if (ctx.StdOutOverride == null) Console.ResetColor();
             }
         }
         
         public static void WriteError(CliContext ctx, string message, object? jsonModel = null)
         {
+            var writer = ctx.StdOutOverride ?? Console.Out;
             if (ctx.IsJson)
             {
                 var envelope = new { error = message, details = jsonModel };
                 string json = JsonSerializer.Serialize(envelope, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine(json);
+                writer.WriteLine(json);
                 return;
             }
             
             if (!ctx.IsSilent)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[ERROR] {message}");
+                var errWriter = ctx.StdErrOverride ?? writer;
+                if (ctx.StdErrOverride == null && ctx.StdOutOverride == null) Console.ForegroundColor = ConsoleColor.Red;
+                errWriter.WriteLine($"[ERROR] {message}");
                 if (jsonModel != null)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(jsonModel, new JsonSerializerOptions { WriteIndented = true }));
+                    errWriter.WriteLine(JsonSerializer.Serialize(jsonModel, new JsonSerializerOptions { WriteIndented = true }));
                 }
-                Console.ResetColor();
+                if (ctx.StdErrOverride == null && ctx.StdOutOverride == null) Console.ResetColor();
             }
         }
     }

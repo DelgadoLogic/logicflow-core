@@ -52,6 +52,8 @@ public sealed class UninstallerEngine
         public string PathOrKey { get; init; } = "";
         public long SizeBytes { get; init; }
         public string Description { get; init; } = "";
+        public bool IsSelected { get; set; } = true;
+        public string SizeFormatted => Kind == ItemKind.RegistryKey ? "Registry" : FormatSize(SizeBytes);
     }
 
     public sealed class ResidualScanResult
@@ -312,12 +314,15 @@ public sealed class UninstallerEngine
     }
 
     /// <summary>
-    /// Cleans residual files and registry keys returned from a ResidualScanResult.
+    /// Cleans selected residual files and registry keys returned from a ResidualScanResult.
+    /// Only items with <see cref="ResidualItem.IsSelected"/> == true are deleted.
     /// </summary>
     public int CleanResiduals(ResidualScanResult scanResult)
     {
+        if (scanResult?.Items is null) return 0;
+
         int cleanedCount = 0;
-        foreach (var item in scanResult.Items)
+        foreach (var item in scanResult.Items.Where(i => i.IsSelected))
         {
             try
             {

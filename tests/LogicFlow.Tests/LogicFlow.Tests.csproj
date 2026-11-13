@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -20,9 +22,17 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\OmniCore.Engine\OmniCore.Engine.csproj" />
     <ProjectReference Include="..\..\src\OmniLicense\OmniLicense.csproj" />
+    <ProjectReference Include="..\..\src\OmniPulse\OmniPulse.csproj" />
     <ProjectReference Include="..\..\src\LogicFlow.Sentinel\LogicFlow.Sentinel.csproj" />
     <ProjectReference Include="..\..\src\LogicFlow.Guardian\LogicFlow.Guardian.csproj" />
     <ProjectReference Include="..\..\src\DelgadoLogic.Core\DelgadoLogic.Core.csproj" />
+    <ProjectReference Include="..\..\src\LogicFlow.Native\LogicFlow.Native.csproj" />
+    <ProjectReference Include="..\..\src\LogicFlow.Dashboard\LogicFlow.Dashboard.csproj" />
+    <ProjectReference Include="..\..\src\LogicFlow.Lazarus\LogicFlow.Lazarus.csproj" />
+    <ProjectReference Include="..\..\src\LogicFlow.Storage.Engine\LogicFlow.Storage.Engine.csproj" />
+    <ProjectReference Include="..\..\src\LogicFlow.VoiceAgent\LogicFlow.VoiceAgent.csproj" />
+    <ProjectReference Include="..\..\src\LogicFlow.CLI\LogicFlow.CLI.csproj" />
+    <ProjectReference Include="..\..\src\OmniService\OmniService.csproj" />
   </ItemGroup>
 
   <ItemGroup>

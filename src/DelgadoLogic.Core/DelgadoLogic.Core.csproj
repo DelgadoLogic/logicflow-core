@@ -11,10 +11,10 @@
     <!-- NuGet Package Metadata -->
     <PackageId>DelgadoLogic.Core</PackageId>
     <Version>1.0.0</Version>
-    <Authors>DelgadoLogic.Tech</Authors>
-    <Company>DelgadoLogic</Company>
+    <Authors>Delgado Creative Enterprises LLC d/b/a DelgadoLogic</Authors>
+    <Company>Delgado Creative Enterprises LLC d/b/a DelgadoLogic</Company>
     <Description>Shared runtime for all DelgadoLogic products — licensing, identity, telemetry, and update engine.</Description>
-    <Copyright>Copyright © 2026 DelgadoLogic. All rights reserved.</Copyright>
+    <Copyright>Copyright (c) 2026 Delgado Creative Enterprises LLC d/b/a DelgadoLogic. All rights reserved.</Copyright>
 
     <!-- Suppress WMI platform warnings (Windows-only by design) -->
     <NoWarn>CA1416</NoWarn>

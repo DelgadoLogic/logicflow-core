@@ -19,7 +19,7 @@
   "functions": {
     "source": "functions",
     "codebase": "logicflow-guardian",
-    "runtime": "nodejs20"
+    "runtime": "nodejs22"
   },
   "firestore": {
     "rules": "firestore.rules",

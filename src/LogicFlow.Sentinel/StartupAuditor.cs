@@ -6,6 +6,8 @@
 //   - Scheduled Tasks
 // Flags entries as trusted, suspicious, or unknown with risk analysis.
 
+using System.Security.Cryptography.X509Certificates;
+using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
@@ -18,18 +20,30 @@ public sealed class StartupAuditor
 {
     private readonly ILogger<StartupAuditor> _logger;
 
-    // Trusted publishers — entries from these vendors are marked safe
-    private static readonly HashSet<string> TrustedPublishers = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "microsoft", "windows", "realtek", "nvidia", "amd", "intel",
-        "logitech", "corsair", "synaptics", "dolby", "waves"
-    };
+    // Trusted publisher organization names verified via Authenticode X.509 Subject
+    private static readonly string[] TrustedPublisherOrganizations =
+    [
+        "Microsoft Corporation",
+        "Microsoft Windows",
+        "NVIDIA Corporation",
+        "Advanced Micro Devices",
+        "AMD",
+        "Intel Corporation",
+        "Realtek Semiconductor",
+        "Logitech",
+        "Corsair",
+        "Synaptics",
+        "Dolby Laboratories",
+        "Waves Audio"
+    ];
 
     // Known suspicious patterns
     private static readonly string[] SuspiciousPatterns =
     [
         "powershell -enc",      // Encoded PowerShell — common malware technique
+        "powershell.exe -enc",
         "cmd /c",               // Shell command chaining
+        "cmd.exe /c",
         "wscript",              // Windows Script Host — VBS malware
         "cscript",              // Console script host
         "mshta",                // HTML Application — common dropper
@@ -38,6 +52,7 @@ public sealed class StartupAuditor
         "certutil -decode",     // File download/decode
         "bitsadmin",            // Background file transfer
         "%temp%",               // Temp directory execution
+        "\\appdata\\local\\temp\\",
         "%appdata%\\..\\local\\temp",  // Temp via AppData
     ];
 
@@ -57,24 +72,27 @@ public sealed class StartupAuditor
     }
 
     /// <summary>
-    /// Performs a comprehensive audit of all startup locations.
+    /// Performs a comprehensive audit of all startup locations (Registry, Startup Folders, and Scheduled Tasks).
     /// </summary>
     public StartupAuditReport Audit()
     {
         _logger.LogInformation("[Sentinel] Starting startup entry audit...");
         var report = new StartupAuditReport { ScannedAt = DateTimeOffset.UtcNow };
 
-        // Scan registry startup locations
+        // 1. Scan registry startup locations
         foreach (var (hive, path, scope) in RegistryLocations)
         {
             ScanRegistryLocation(report, hive, path, scope);
         }
 
-        // Scan startup folders
+        // 2. Scan startup folders
         ScanStartupFolder(report,
             Environment.GetFolderPath(Environment.SpecialFolder.Startup), "User Startup Folder");
         ScanStartupFolder(report,
             Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), "All Users Startup Folder");
+
+        // 3. Scan Scheduled Tasks (Boot / Logon triggers)
+        ScanScheduledTasks(report);
 
         // Classify results
         report.TotalEntries = report.Entries.Count;
@@ -125,49 +143,39 @@ public sealed class StartupAuditor
         }
     }
 
-    private void ScanStartupFolder(StartupAuditReport report, string folderPath, string scope)
+    public void ScanStartupFolder(StartupAuditReport report, string folderPath, string scope)
     {
         if (!Directory.Exists(folderPath)) return;
 
         try
         {
+            // Single enumeration of files in the startup folder (no duplicate .lnk pass)
             foreach (var file in Directory.GetFiles(folderPath))
             {
                 var fileName = Path.GetFileName(file);
-                var ext = Path.GetExtension(file).ToLowerInvariant();
+                if (fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase))
+                    continue;
 
+                var ext = Path.GetExtension(file).ToLowerInvariant();
                 var isSuspicious = ext is ".vbs" or ".bat" or ".cmd" or ".ps1" or ".hta" or ".wsf";
+
+                string resolvedTarget = ext == ".lnk" ? (TryResolveShortcutTarget(file) ?? file) : file;
+
+                var classification = isSuspicious
+                    ? StartupClassification.Suspicious
+                    : Classify(fileName, resolvedTarget);
 
                 var entry = new StartupEntry
                 {
                     Name = fileName,
-                    Command = file,
+                    Command = resolvedTarget,
                     Source = $"Folder: {folderPath}",
                     Scope = scope,
-                    Classification = isSuspicious
-                        ? StartupClassification.Suspicious
-                        : IsTrusted(fileName)
-                            ? StartupClassification.Trusted
-                            : StartupClassification.Unknown,
-                    FileExists = true,
-                    Reason = isSuspicious ? $"Script file in startup folder ({ext})" : null
+                    Classification = classification,
+                    FileExists = CheckFileExists(resolvedTarget),
+                    Reason = isSuspicious ? $"Script file in startup folder ({ext})" : GetSuspiciousReason(resolvedTarget)
                 };
 
-                report.Entries.Add(entry);
-            }
-
-            // Also check for shortcuts (.lnk)
-            foreach (var lnk in Directory.GetFiles(folderPath, "*.lnk"))
-            {
-                var entry = new StartupEntry
-                {
-                    Name = Path.GetFileName(lnk),
-                    Command = lnk,
-                    Source = $"Folder: {folderPath}",
-                    Scope = scope,
-                    Classification = StartupClassification.Unknown,
-                    FileExists = true
-                };
                 report.Entries.Add(entry);
             }
         }
@@ -177,9 +185,99 @@ public sealed class StartupAuditor
         }
     }
 
+    public void ScanScheduledTasks(StartupAuditReport report, string? customTasksDir = null)
+    {
+        try
+        {
+            var tasksDir = customTasksDir ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                "System32", "Tasks");
+
+            if (!Directory.Exists(tasksDir)) return;
+
+            var taskFiles = new List<string>();
+            try
+            {
+                // Enumerate top-level and immediate vendor task folders (skipping deep Microsoft internal OS maintenance tree unless customTasksDir is set)
+                foreach (var file in Directory.GetFiles(tasksDir))
+                {
+                    taskFiles.Add(file);
+                }
+
+                foreach (var subDir in Directory.GetDirectories(tasksDir))
+                {
+                    var dirName = Path.GetFileName(subDir);
+                    if (customTasksDir == null && dirName.Equals("Microsoft", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    try
+                    {
+                        taskFiles.AddRange(Directory.GetFiles(subDir, "*", SearchOption.AllDirectories));
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+
+            foreach (var taskFile in taskFiles)
+            {
+                try
+                {
+                    var doc = XDocument.Load(taskFile);
+                    var ns = doc.Root?.Name.Namespace ?? XNamespace.None;
+
+                    // Check if task has LogonTrigger or BootTrigger (or any Exec command if in custom folder)
+                    bool hasStartupTrigger =
+                        doc.Descendants(ns + "LogonTrigger").Any() ||
+                        doc.Descendants(ns + "BootTrigger").Any() ||
+                        doc.Descendants().Any(e => e.Name.LocalName is "LogonTrigger" or "BootTrigger");
+
+                    if (!hasStartupTrigger && customTasksDir == null)
+                        continue;
+
+                    var commandNode = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "Command");
+                    if (commandNode == null || string.IsNullOrWhiteSpace(commandNode.Value))
+                        continue;
+
+                    var argsNode = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "Arguments");
+                    var rawCommand = commandNode.Value.Trim();
+                    var fullCommand = argsNode != null && !string.IsNullOrWhiteSpace(argsNode.Value)
+                        ? $"{rawCommand} {argsNode.Value.Trim()}"
+                        : rawCommand;
+
+                    var taskName = Path.GetFileName(taskFile);
+                    var classification = Classify(taskName, fullCommand);
+
+                    var entry = new StartupEntry
+                    {
+                        Name = taskName,
+                        Command = fullCommand,
+                        Source = $"ScheduledTask: {taskFile}",
+                        Scope = "Scheduled Task",
+                        Classification = classification,
+                        FileExists = CheckFileExists(rawCommand),
+                        Reason = classification == StartupClassification.Suspicious ? GetSuspiciousReason(fullCommand) : null
+                    };
+
+                    report.Entries.Add(entry);
+                }
+                catch
+                {
+                    // Skip unreadable or non-XML task files
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[Sentinel] Failed to scan scheduled tasks");
+        }
+    }
+
+    public static StartupClassification ClassifyEntry(string name, string command) => Classify(name, command);
+
     private static StartupClassification Classify(string name, string command)
     {
-        // Check for suspicious patterns first
+        // 1. Check for suspicious patterns first
         var lower = command.ToLowerInvariant();
         foreach (var pattern in SuspiciousPatterns)
         {
@@ -187,17 +285,152 @@ public sealed class StartupAuditor
                 return StartupClassification.Suspicious;
         }
 
-        // Check for trusted publishers
-        if (IsTrusted(name) || IsTrusted(command))
+        // 2. Verify real Authenticode X.509 signature on the target executable (never trust substring matches!)
+        if (IsTrustedExecutable(command))
             return StartupClassification.Trusted;
 
         return StartupClassification.Unknown;
     }
 
-    private static bool IsTrusted(string text)
+    /// <summary>
+    /// Verifies that the executable referenced by <paramref name="command"/> exists on disk
+    /// and carries a valid Authenticode X.509 signature from a trusted publisher.
+    /// Does NOT trust filenames or paths merely containing "microsoft" or "windows".
+    /// </summary>
+    public static bool IsTrustedExecutable(string? command)
     {
-        var lower = text.ToLowerInvariant();
-        return TrustedPublishers.Any(p => lower.Contains(p));
+        if (string.IsNullOrWhiteSpace(command)) return false;
+
+        var exePath = ExtractExecutablePath(command);
+        if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+            return false;
+
+        try
+        {
+            using var cert = X509Certificate.CreateFromSignedFile(exePath);
+            using var cert2 = new X509Certificate2(cert);
+
+            using var chain = new X509Chain();
+            chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+            chain.ChainPolicy.VerificationFlags = X509VerificationFlags.IgnoreNotTimeValid;
+            bool isChainValid = chain.Build(cert2);
+            if (!isChainValid)
+                return false;
+
+            var subject = cert2.Subject ?? "";
+            var simpleName = cert2.GetNameInfo(X509NameType.SimpleName, forIssuer: false) ?? "";
+
+            bool matchesTrustedOrg = TrustedPublisherOrganizations.Any(org =>
+                subject.Contains(org, StringComparison.OrdinalIgnoreCase) ||
+                simpleName.Contains(org, StringComparison.OrdinalIgnoreCase));
+
+            if (matchesTrustedOrg)
+                return true;
+
+            // Fallback: allow validly signed executables residing under %SystemRoot% or %ProgramFiles%
+            return IsUnderProtectedSystemDirectory(exePath);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsUnderProtectedSystemDirectory(string exePath)
+    {
+        try
+        {
+            string fullPath = Path.GetFullPath(exePath);
+            string[] roots =
+            [
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            ];
+
+            foreach (var root in roots)
+            {
+                if (!string.IsNullOrWhiteSpace(root) &&
+                    fullPath.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        catch { }
+
+        return false;
+    }
+
+    public static string? ExtractExecutablePath(string command)
+    {
+        if (string.IsNullOrWhiteSpace(command)) return null;
+
+        var expanded = Environment.ExpandEnvironmentVariables(command.Trim());
+        if (expanded.StartsWith('"'))
+        {
+            int closing = expanded.IndexOf('"', 1);
+            if (closing > 1)
+            {
+                return expanded.Substring(1, closing - 1);
+            }
+        }
+
+        if (File.Exists(expanded))
+            return expanded;
+
+        var parts = expanded.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 0)
+        {
+            string candidate = parts[0];
+            if (File.Exists(candidate))
+                return candidate;
+
+            // Check System32 if bare executable name (e.g., "SecurityHealthSystray.exe")
+            if (string.IsNullOrEmpty(Path.GetDirectoryName(candidate)))
+            {
+                string sysCandidate = Path.Combine(Environment.SystemDirectory, candidate);
+                if (File.Exists(sysCandidate))
+                    return sysCandidate;
+            }
+
+            // Handle unquoted paths with spaces like C:\Program Files\App\app.exe --minimized
+            for (int i = 1; i < parts.Length; i++)
+            {
+                candidate = $"{candidate} {parts[i]}";
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+        }
+
+        return parts.FirstOrDefault();
+    }
+
+    private static string? TryResolveShortcutTarget(string lnkPath)
+    {
+        try
+        {
+            var bytes = File.ReadAllBytes(lnkPath);
+            const string pathPattern = @"[A-Za-z]:\\[^\x00-\x1F""<>|?*]+\.(exe|dll|bat|cmd|vbs|ps1)";
+
+            var ascii = System.Text.Encoding.ASCII.GetString(bytes);
+            var match = System.Text.RegularExpressions.Regex.Match(
+                ascii,
+                pathPattern,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (match.Success && File.Exists(match.Value))
+                return match.Value;
+
+            var unicode = System.Text.Encoding.Unicode.GetString(bytes);
+            var uniMatch = System.Text.RegularExpressions.Regex.Match(
+                unicode,
+                pathPattern,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (uniMatch.Success && File.Exists(uniMatch.Value))
+                return uniMatch.Value;
+        }
+        catch { }
+        return null;
     }
 
     private static string? GetSuspiciousReason(string command)
@@ -213,14 +446,8 @@ public sealed class StartupAuditor
 
     private static bool CheckFileExists(string command)
     {
-        // Extract the executable path from the command (handle quoted paths)
-        var path = command.Trim('"').Split('"')[0];
-        if (path.Contains(' ') && !File.Exists(path))
-        {
-            // Try splitting on first space for paths like "C:\Program Files\foo.exe -arg"
-            path = path.Split(' ')[0];
-        }
-        return File.Exists(path);
+        var exePath = ExtractExecutablePath(command);
+        return !string.IsNullOrWhiteSpace(exePath) && File.Exists(exePath);
     }
 
     private static string TruncateForLog(string value, int maxLen = 100) =>

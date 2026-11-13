@@ -32,31 +32,45 @@ public sealed class MicrophoneReader : IDisposable
         _log = log;
     }
 
+    public bool IsMicrophoneAvailable { get; private set; } = true;
+
     public void Start(GeminiLiveSession session, CancellationToken ct)
     {
         if (_running) return;
         _session = session;
         _ct = ct;
-        _running = true;
 
-        _waveIn = new WaveInEvent
+        try
         {
-            WaveFormat  = new WaveFormat(SampleRate, BitsPerSamp, Channels),
-            BufferMilliseconds = ChunkMs,
-        };
+            _waveIn = new WaveInEvent
+            {
+                WaveFormat         = new WaveFormat(SampleRate, BitsPerSamp, Channels),
+                BufferMilliseconds = ChunkMs,
+            };
 
-        _waveIn.DataAvailable += OnDataAvailable;
-        _waveIn.RecordingStopped += (_, e) =>
+            _waveIn.DataAvailable += OnDataAvailable;
+            _waveIn.RecordingStopped += (_, e) =>
+            {
+                if (e.Exception is not null)
+                    _log.LogError(e.Exception, "[Mic] Recording stopped with error");
+                else
+                    _log.LogInformation("[Mic] Recording stopped.");
+            };
+
+            _waveIn.StartRecording();
+            _running = true;
+            IsMicrophoneAvailable = true;
+            _log.LogInformation("[Mic] Started recording: {Rate}Hz {Bits}-bit mono {Chunk}ms chunks",
+                SampleRate, BitsPerSamp, ChunkMs);
+        }
+        catch (Exception ex)
         {
-            if (e.Exception is not null)
-                _log.LogError(e.Exception, "[Mic] Recording stopped with error");
-            else
-                _log.LogInformation("[Mic] Recording stopped.");
-        };
-
-        _waveIn.StartRecording();
-        _log.LogInformation("[Mic] Started recording: {Rate}Hz {Bits}-bit mono {Chunk}ms chunks",
-            SampleRate, BitsPerSamp, ChunkMs);
+            _running = false;
+            IsMicrophoneAvailable = false;
+            try { _waveIn?.Dispose(); } catch { }
+            _waveIn = null;
+            _log.LogWarning(ex, "[Mic] No microphone input device available (e.g. RDP/headless); continuing without live mic stream.");
+        }
     }
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)

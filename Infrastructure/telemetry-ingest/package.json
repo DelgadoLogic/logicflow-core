@@ -1,0 +1,23 @@
+{
+  "name": "logicflow-telemetry-ingest",
+  "version": "1.0.0",
+  "description": "LogicFlow telemetry & crash ingest (Cloud Run). Schema v1. Agent-optimised storage + daily digest.",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node scripts/dev.js",
+    "digest": "node src/jobs/digest.js",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\"",
+    "lint": "node scripts/lint.js"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.14.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

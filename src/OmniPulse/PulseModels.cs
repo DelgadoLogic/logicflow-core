@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // OmniPulse — Telemetry Data Models
-// Anonymous, privacy-first data structures for crash reports, usage stats,
-// and system health digests. No PII is ever collected.
+// Pseudonymous, privacy-first data structures for crash reports, usage stats,
+// and system health digests. No usernames, file paths or IPs are collected.
 // ─────────────────────────────────────────────────────────────────────────────
 
 using System.Text.Json.Serialization;
@@ -46,8 +46,11 @@ public sealed class CrashReport
     public string ExceptionType { get; init; } = "";
     public string Message { get; init; } = "";
     public string StackTrace { get; init; } = "";
+    public string? HResult { get; init; }
     public string? InnerExceptionType { get; init; }
     public string? InnerMessage { get; init; }
+    public List<string>? InnerExceptionHierarchy { get; init; }
+    public string? XamlLineInfo { get; init; }
     public string ActivePage { get; init; } = "";
     public string LastAction { get; init; } = "";
     public long MemoryUsageMB { get; init; }
@@ -73,10 +76,10 @@ public sealed class CrashReport
     public TimeSpan? TimeSinceLastOptimization { get; init; }
 }
 
-// ─── System Profile (Anonymous) ───────────────────────────────────────────
+// ─── System Profile (Pseudonymous) ───────────────────────────────────────────
 
 /// <summary>
-/// Anonymous hardware/software profile. NO usernames, file paths, or PII.
+/// Pseudonymous hardware/software profile. NO usernames, file paths, or PII.
 /// </summary>
 public sealed record SystemProfile
 {
@@ -232,7 +235,7 @@ public sealed class ScanPerformanceEvent
 }
 
 /// <summary>
-/// Anonymous session flow — which pages users visit and in what order.
+/// Pseudonymous session flow — which pages users visit and in what order.
 /// Helps discover features users never find → improve UX and onboarding.
 /// No page content or user data — just page names and timestamps.
 /// </summary>
@@ -241,7 +244,7 @@ public sealed class SessionFlow
     public List<string> PageSequence { get; init; } = new(); // ["Dashboard", "Drivers", "Settings"]
     public TimeSpan SessionDuration { get; init; }
     public int TotalClicks { get; init; }
-    public Dictionary<string, TimeSpan> TimePerPage { get; init; } = new(); // Anonymous dwell time
+    public Dictionary<string, TimeSpan> TimePerPage { get; init; } = new(); // Pseudonymous dwell time
     public string? ExitPage { get; init; }                  // Last page before close/crash
 }
 
@@ -293,7 +296,7 @@ public sealed class KnownIssue
 /// <summary>
 /// Comprehensive system snapshot captured on first install ("day zero").
 /// Sent once to Pulse to seed the driver DB, train AI profiles, and
-/// enable pre/post improvement tracking. Zero PII.
+/// enable pre/post improvement tracking. No usernames, paths or IPs.
 /// </summary>
 public sealed record SystemBaseline
 {

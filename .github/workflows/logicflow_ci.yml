@@ -68,7 +68,7 @@ jobs:
               \"version\": \"$VERSION\",
               \"tag\": \"v$VERSION\",
               \"release_url\": \"https://github.com/DelgadoLogic/logicflow-core/releases/tag/v$VERSION\",
-              \"min_os\": \"windows-xp\",
+              \"min_os\": \"windows-10-x64\",
               \"status\": \"available\"
             }"
           echo "Manifest published for LogicFlow v$VERSION"

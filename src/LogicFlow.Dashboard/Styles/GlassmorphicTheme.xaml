@@ -63,6 +63,7 @@
 
     <SolidColorBrush x:Key="BrushTextMain" Color="{StaticResource ColorTextMain}"/>
     <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextMuted}"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource ColorTextMuted}"/>
     <SolidColorBrush x:Key="BrushTextInverse" Color="{StaticResource ColorTextInverse}"/>
 
     <SolidColorBrush x:Key="BrushSuccess" Color="{StaticResource ColorSuccess}"/>
@@ -121,7 +122,7 @@
        ========================================================================== -->
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMain}"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="ClearType"/>
         <Setter Property="TextOptions.TextRenderingMode" Value="Auto"/>
     </Style>
@@ -129,18 +130,18 @@
     <Style x:Key="HeadingStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource FontOutfit}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMain}"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="ClearType"/>
     </Style>
 
     <Style x:Key="MutedTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
     </Style>
 
     <Style x:Key="MonoTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMain}"/>
     </Style>
 
     <!-- ==========================================================================
@@ -148,79 +149,27 @@
        ========================================================================== -->
     <!-- .glass-card -->
     <Style x:Key="GlassCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource BrushBgCard}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="Background" Value="{DynamicResource BrushBgCard}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="20"/>
         <Setter Property="Padding" Value="24,20"/>
-        <Setter Property="Effect" Value="{StaticResource ShadowMain}"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <!-- Smooth state change utilizing Storyboards for professional feel -->
-                <Trigger.EnterActions>
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBgCardHover}" Duration="0:0:0.2"/>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBorderHover}" Duration="0:0:0.2"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </Trigger.EnterActions>
-                <Trigger.ExitActions>
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBgCard}" Duration="0:0:0.2"/>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBorder}" Duration="0:0:0.2"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </Trigger.ExitActions>
+                <Setter Property="Background" Value="{DynamicResource BrushBgCardHover}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderHover}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
 
     <!-- .glass-card.highlight-glow -->
     <Style x:Key="GlassCardHighlightStyle" TargetType="Border" BasedOn="{StaticResource GlassCardStyle}">
-        <!-- Combined effect of ShadowMain (depth shadow) and ShadowAccent (neon glow) -->
-        <Setter Property="Effect" Value="{StaticResource ShadowAccent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Trigger.EnterActions>
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBgCardHover}" Duration="0:0:0.2"/>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBorderHover}" Duration="0:0:0.2"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.BlurRadius)"
-                                             To="40" Duration="0:0:0.2"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)"
-                                             To="0.55" Duration="0:0:0.2"/>
-                            <!-- Shift color from Accent Glow to Accent Border or Dark Shadow -->
-                            <ColorAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Color)"
-                                            To="Black" Duration="0:0:0.2"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </Trigger.EnterActions>
-                <Trigger.ExitActions>
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBgCard}" Duration="0:0:0.2"/>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                            To="{StaticResource ColorBorder}" Duration="0:0:0.2"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.BlurRadius)"
-                                             To="24" Duration="0:0:0.2"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)"
-                                             To="0.18" Duration="0:0:0.2"/>
-                            <ColorAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Color)"
-                                            To="{StaticResource ColorAccent}" Duration="0:0:0.2"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </Trigger.ExitActions>
+                <Setter Property="Background" Value="{DynamicResource BrushBgCardHover}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderHover}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -236,6 +185,7 @@
         <Setter Property="Height" Value="40"/>
         <Setter Property="Padding" Value="16,8"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="OverridesDefaultStyle" Value="True"/>
         <Setter Property="Template">
@@ -245,10 +195,21 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
                             CornerRadius="10">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                           RecognizesAccessKey="True"/>
                     </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BrandCyanBrush}"/>
+                            <Setter TargetName="border" Property="BorderThickness" Value="1.5"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Opacity" Value="0.4"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -256,10 +217,9 @@
 
     <!-- .btn-primary -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-        <Setter Property="Background" Value="{StaticResource BrushAccent}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextInverse}"/>
+        <Setter Property="Background" Value="{DynamicResource BrushAccent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextInverse}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Effect" Value="{StaticResource ShadowButtonPrimary}"/>
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         <Setter Property="RenderTransform">
             <Setter.Value>
@@ -273,8 +233,6 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.9" Duration="0:0:0.15"/>
                             <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(TranslateTransform.Y)" To="-1" Duration="0:0:0.15"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.BlurRadius)" To="20" Duration="0:0:0.15"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.Opacity)" To="0.4" Duration="0:0:0.15"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.EnterActions>
@@ -283,8 +241,6 @@
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1.0" Duration="0:0:0.15"/>
                             <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.15"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.BlurRadius)" To="16" Duration="0:0:0.15"/>
-                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.Opacity)" To="0.3" Duration="0:0:0.15"/>
                         </Storyboard>
                     </BeginStoryboard>
                 </Trigger.ExitActions>
@@ -303,9 +259,9 @@
     <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
         <!-- Transparent background with border -->
         <Setter Property="Background" Value="#08FFFFFF"/>               <!-- rgba(255, 255, 255, 0.03) -->
-        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMain}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Trigger.EnterActions>
@@ -335,17 +291,11 @@
     <!-- .btn-danger -->
     <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
         <Setter Property="Background" Value="{StaticResource BrushDanger}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Effect" Value="{StaticResource ShadowButtonDanger}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Opacity" Value="0.95"/>
-                <Setter Property="Effect">
-                    <Setter.Value>
-                        <DropShadowEffect BlurRadius="20" ShadowDepth="6" Direction="270" Color="{StaticResource ColorDanger}" Opacity="0.30"/>
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Opacity" Value="0.92"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -355,15 +305,9 @@
         <Setter Property="Background" Value="{StaticResource BrushSuccess}"/>
         <Setter Property="Foreground" Value="{StaticResource BrushTextInverse}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Effect" Value="{StaticResource ShadowButtonSuccess}"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Opacity" Value="0.95"/>
-                <Setter Property="Effect">
-                    <Setter.Value>
-                        <DropShadowEffect BlurRadius="20" ShadowDepth="6" Direction="270" Color="{StaticResource ColorSuccess}" Opacity="0.30"/>
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Opacity" Value="0.92"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -377,7 +321,7 @@
         <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -403,7 +347,7 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
                                         Height="22"
-                                        Background="{StaticResource BrushAccent}"
+                                        Background="{DynamicResource BrushAccent}"
                                         CornerRadius="0,4,4,0"
                                         Margin="-16,0,0,0"
                                         Visibility="Collapsed">
@@ -424,17 +368,20 @@
                                 <Condition Property="IsMouseOver" Value="True"/>
                                 <Condition Property="IsChecked" Value="False"/>
                             </MultiTrigger.Conditions>
-                            <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource BrushTextMain}"/>
                             <Setter TargetName="border" Property="Background" Value="#05FFFFFF"/> <!-- rgba(255,255,255,0.02) -->
                             <Setter TargetName="border" Property="BorderBrush" Value="#0AFFFFFF"/> <!-- rgba(255,255,255,0.04) -->
                         </MultiTrigger>
                         <!-- Checked / Active State -->
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter TargetName="border" Property="Background" Value="{StaticResource BrushAccentGlow}"/>
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BrushAccentBorder}"/>
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource BrushAccentGlow}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BrushAccentBorder}"/>
                             <Setter TargetName="activeIndicator" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -447,26 +394,21 @@
        ========================================================================== -->
     <!-- .ai-terminal / .log-console-box -->
     <Style x:Key="TerminalBoxStyle" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource BrushBgTerminal}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="Background" Value="{DynamicResource BrushBgTerminal}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Padding" Value="16"/>
-        <!-- Simulates the inset shadow using a soft DropShadow with negative depth and low opacity -->
-        <Setter Property="Effect">
-            <Setter.Value>
-                <DropShadowEffect BlurRadius="8" ShadowDepth="-2" Direction="90" Color="Black" Opacity="0.35"/>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
 
     <!-- Console Input box -->
     <!-- .ai-input-row input -->
     <Style x:Key="TerminalInputStyle" TargetType="TextBox">
-        <Setter Property="Background" Value="#33000000"/>                 <!-- rgba(0,0,0,0.2) -->
-        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="Background" Value="{DynamicResource BrandDarkCardBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMain}"/>
         <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Padding" Value="12,10"/>
@@ -484,7 +426,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BrushHighlight}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BrushHighlight}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="border" Property="Opacity" Value="0.5"/>
@@ -500,19 +442,19 @@
        ========================================================================== -->
     <Style x:Key="DashboardTableHeaderStyle" TargetType="GridViewColumnHeader">
         <Setter Property="Background" Value="#05FFFFFF"/>             <!-- rgba(255,255,255,0.02) -->
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
         <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="FontSize" Value="10.5"/>
+        <Setter Property="FontSize" Value="11.5"/>
         <Setter Property="Padding" Value="12,8"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
     </Style>
 
     <Style x:Key="DashboardTableRowStyle" TargetType="ListViewItem">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextMain}"/>
         <Setter Property="BorderBrush" Value="#05FFFFFF"/>              <!-- rgba(255,255,255,0.02) -->
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
         <Setter Property="Padding" Value="12,10"/>

@@ -29,7 +29,7 @@ public sealed class GameModeEngine
     public bool IsGameModeActive => _isGameModeActive;
 
     // ─── Power Scheme GUID Constants ─────────────────────────────────────
-    public const string HighPerformanceGuid = "8c5e7dd5-554b-4814-9e3a-702f496c2de0";
+    public const string HighPerformanceGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
     public const string UltimatePerformanceGuid = "e9a42b02-d5df-448d-aa00-03f14749eb61";
     public const string BalancedGuid = "381b4222-f694-41f0-9685-ff5bb260df2e";
 
@@ -70,6 +70,7 @@ public sealed class GameModeEngine
                 if (sc.Status == ServiceControllerStatus.Running)
                 {
                     sc.Stop();
+                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(3));
                     _pausedServices.Add(serviceName);
                 }
             }
@@ -166,7 +167,8 @@ public sealed class GameModeEngine
             if (proc == null) return BalancedGuid;
             var outStr = proc.StandardOutput.ReadToEnd();
             proc.WaitForExit();
-            return outStr.Trim();
+            var match = System.Text.RegularExpressions.Regex.Match(outStr, @"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+            return match.Success ? match.Value : BalancedGuid;
         }
         catch
         {

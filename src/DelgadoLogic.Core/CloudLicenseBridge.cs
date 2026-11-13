@@ -44,10 +44,10 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
     private readonly string _licensePath;
     private readonly string _cachePath;
 
-    public CloudLicenseBridge(ILogger logger, string appDataPath)
+    public CloudLicenseBridge(ILogger logger, string appDataPath, HttpClient? httpClient = null)
     {
         _logger = logger;
-        _http = new HttpClient
+        _http = httpClient ?? new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(30),
             DefaultRequestHeaders =
@@ -75,7 +75,7 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
     {
         try
         {
-            var identity = DelgadoLogicIdentity.LoadOrCreate();
+            var identity = DelgadoLogicIdentity.LoadOrCreate(allowDiskPersistence: false);
             var hwid = identity.DeviceId;
 
             _logger.LogInformation("[License] Activating order {OrderId} for HWID {Hwid}...",
@@ -93,9 +93,19 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorData = JsonSerializer.Deserialize<JsonDocument>(responseBody);
-                var errorMsg = errorData?.RootElement.GetProperty("error").GetString()
-                    ?? $"HTTP {response.StatusCode}";
+                var errorMsg = $"HTTP {response.StatusCode}";
+                try
+                {
+                    using var errorData = JsonDocument.Parse(responseBody);
+                    if (errorData.RootElement.ValueKind == JsonValueKind.Object &&
+                        errorData.RootElement.TryGetProperty("error", out var errProp) &&
+                        errProp.ValueKind == JsonValueKind.String &&
+                        !string.IsNullOrWhiteSpace(errProp.GetString()))
+                    {
+                        errorMsg = errProp.GetString()!;
+                    }
+                }
+                catch { /* non-JSON error body: keep HTTP status fallback */ }
 
                 _logger.LogWarning("[License] Activation failed: {Error}", errorMsg);
                 return new ActivationResult(false, errorMsg, null, null);
@@ -107,11 +117,16 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
                 return new ActivationResult(false, "Invalid server response", null, null);
             }
 
+            // Activation succeeded: now persist shared device identity + license token
+            DelgadoLogicIdentity.LoadOrCreate(allowDiskPersistence: true);
+
             // Persist the license token locally for offline validation
             var localToken = new LocalLicenseToken
             {
                 Payload = result.Token.Payload,
                 Signature = result.Token.Signature,
+                Alg = result.Token.Alg,
+                Kid = result.Token.Kid,
                 Tier = result.Tier,
                 ExpiresAt = DateTimeOffset.Parse(result.ExpiresAt),
                 ActivationId = result.ActivationId,
@@ -171,7 +186,7 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
                 return new ValidationResult(false, "No license found on this device.", null);
             }
 
-            var identity = DelgadoLogicIdentity.LoadOrCreate();
+            var identity = DelgadoLogicIdentity.LoadOrCreate(allowDiskPersistence: false);
 
             var request = new ValidationRequest
             {
@@ -205,6 +220,7 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
                 return new ValidationResult(false, result.Reason ?? "License invalid", null);
             }
 
+            DelgadoLogicIdentity.LoadOrCreate(allowDiskPersistence: true);
             _logger.LogInformation("[License] ✓ Cloud validation passed — Tier={Tier}", result.Tier);
             return new ValidationResult(true, "Valid", result.Tier);
         }
@@ -235,7 +251,9 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
         try
         {
             var json = File.ReadAllText(_licensePath);
-            return JsonSerializer.Deserialize<LocalLicenseToken>(json);
+            return JsonSerializer.Deserialize<LocalLicenseToken>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
         catch (Exception ex)
         {
@@ -246,23 +264,34 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
 
     /// <summary>
     /// Returns the current license tier from local storage.
-    /// Returns "Free" if no license is activated.
+    /// Fails closed to "Free" if no license is activated, expired, or has an unrecognised tier string.
     /// </summary>
     public string GetCurrentTier()
     {
         var token = LoadLocalToken();
         if (token is null) return "Free";
         if (token.ExpiresAt < DateTimeOffset.UtcNow) return "Free";
-        return token.Tier ?? "Free";
+        return NormalizeTierFailClosed(token.Tier);
     }
 
     /// <summary>
-    /// Returns true if this device has an active paid license.
+    /// Returns true if this device has an active paid (Pro) license.
+    /// Fails closed: Community, Free, and unknown values return false.
     /// </summary>
-    public bool IsPaid()
+    public bool IsPaid() => string.Equals(GetCurrentTier(), "Pro", StringComparison.Ordinal);
+
+    private static string NormalizeTierFailClosed(string? rawTier)
     {
-        var tier = GetCurrentTier();
-        return tier is not ("Free" or "" or null);
+        if (string.IsNullOrWhiteSpace(rawTier)) return "Free";
+        var trimmed = rawTier.Trim();
+        if (trimmed.Length == 0 || trimmed.Any(char.IsDigit)) return "Free";
+        var normalized = trimmed.Replace("-", "").Replace("_", "").Trim();
+        return normalized.ToLowerInvariant() switch
+        {
+            "pro" or "aeonpro" or "family" or "enterprise" or "enterpriseseat" or "sovereignsuite" or "suite" or "founderpass" or "founder" => "Pro",
+            "community" => "Community",
+            _ => "Free"
+        };
     }
 
     // ─── Internals ───────────────────────────────────────────────────────────
@@ -275,7 +304,9 @@ public sealed class CloudLicenseBridge : IAsyncDisposable
         try
         {
             var json = File.ReadAllText(_cachePath);
-            var cache = JsonSerializer.Deserialize<ActivationCache>(json);
+            var cache = JsonSerializer.Deserialize<ActivationCache>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (cache is null)
                 return new ValidationResult(false, "Cache corrupt.", null);
 
@@ -327,6 +358,8 @@ internal sealed class TokenPair
 {
     [JsonPropertyName("payload")]   public string Payload { get; set; } = "";
     [JsonPropertyName("signature")] public string Signature { get; set; } = "";
+    [JsonPropertyName("alg")]       public string? Alg { get; set; }
+    [JsonPropertyName("kid")]       public string? Kid { get; set; }
 }
 
 internal sealed class CloudValidationResponse
@@ -352,11 +385,13 @@ public sealed record ValidationResult(
     string Message,
     string? Tier);
 
-/// <summary>Locally persisted license token — used for offline RSA validation.</summary>
+/// <summary>Locally persisted license token — used for offline signature validation.</summary>
 public sealed class LocalLicenseToken
 {
     public string Payload       { get; set; } = "";
     public string Signature     { get; set; } = "";
+    public string? Alg          { get; set; }
+    public string? Kid          { get; set; }
     public string? Tier         { get; set; }
     public DateTimeOffset ExpiresAt    { get; set; }
     public string ActivationId  { get; set; } = "";
