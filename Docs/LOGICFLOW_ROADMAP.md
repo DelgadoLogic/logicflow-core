@@ -10,8 +10,8 @@
 
 - [x] **8-Module Dark-Mode WPF Desktop Suite (`LogicFlow.exe`)**:
   - Dashboard, Sentinel — Security, Guardian — Performance, HyperStore — Storage Armor, Resource Monitor, Toolbox — Utilities, Lazarus — Recovery, Registry Surgeon, and Settings + first-run `ConsentWindow`.
-- [x] **10-Group, 53-Subcommand CLI (`lf.exe`)**:
-  - Full command-line coverage across `sys` (11), `reg` (4), `sec` (10), `app` (4), `net` (4), `driver` (6), `lazarus` (3), `toolbox` (6), `agent` (1), and `store` (4), plus 6 top-level aliases (`boost`, `turbo`, `optimize`, `rollback`, `status`, `discover`).
+- [x] **10-Group, 58-Subcommand CLI (`lf.exe`)**:
+  - Full command-line coverage across `sys` (15), `reg` (4), `sec` (10), `app` (4), `net` (4), `driver` (6), `lazarus` (3), `toolbox` (7), `agent` (1), and `store` (4), plus 6 top-level aliases (`boost`, `turbo`, `optimize`, `rollback`, `status`, `discover`).
 - [x] **HyperStore Content-Defined Storage Engine (`LogicFlow.Storage.Engine` & `VolumeAwareDeduplicator`)**:
   - `FastCdcChunker` (8–64 KB chunks), 256-bit `Blake3` (`3.0.2`) SIMD hashing, `MinHashClusterer`, `DualTierZstdCompressor` (`ZstdSharp.Port 0.8.4` Hot L3 / Cold L19 + dictionary) `.lfc` container packing/unpacking, ReFS Block Cloning + NTFS Hard Link deduplication (`lf store scan|dedup|pack|unpack`), and Full-Screen Game Guard (`<250 ms` target / `<500 ms` hard SLA).
 - [x] **Game Vault NTFS WOF Compression (`GameCompression`)**:
@@ -21,7 +21,7 @@
 - [x] **Three-Tier Value Exchange & Consent-Gated Pseudonymous Telemetry (`OmniPulse`)**:
   - **Free ($0, scan-only preview, telemetry `None`)**, **Community ($0, interactive core features for personal use with mandatory pseudonymous telemetry [`Standard` required; `Extended` optional checkbox in EU/EEA/UK/CH])**, and **Pro ($29.99 regular / $19.99 launch promo, 3 devices, background automation + deep recovery + commercial rights, telemetry optional & OFF by default)**, plus **$9.99 Extra Seat** and **$149.00 Team 10-Pack**.
   - Client/server PII scrubbing, HMAC-SHA256 wire signing, instant self-service erasure (`POST /v1/telemetry/delete`), and 90-day raw GCS retention.
-- [x] **Offline RSA-2048 Licensing (`OmniLicense`) & 994 Automated Tests Across 51 Test Files (`LogicFlow.Tests`)**.
+- [x] **Offline Dual Ed25519 + RSA-2048 Licensing (`OmniLicense`) & 1,839 Automated Test Executions Across 54 Test Files (`LogicFlow.Tests`)**.
 
 ---
 

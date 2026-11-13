@@ -757,15 +757,18 @@ public class LazarusEngineTests
     [Fact]
     public void TryDecodeIcoStream_RealAppIcon_DecodesHighestResolutionFrame()
     {
-        string[] candidatePaths =
-        [
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../Assets/Icons/LogicFlow.ico"),
-            Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\Assets\Icons\LogicFlow.ico"),
-            Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "Assets/Icons/LogicFlow.ico")),
-            @"C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\Assets\Icons\LogicFlow.ico"
-        ];
-
-        string? foundPath = candidatePaths.FirstOrDefault(File.Exists);
+        string? foundPath = null;
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            var candidate = Path.Combine(dir.FullName, "Assets", "Icons", "LogicFlow.ico");
+            if (File.Exists(candidate))
+            {
+                foundPath = candidate;
+                break;
+            }
+            dir = dir.Parent;
+        }
         if (foundPath != null)
         {
             byte[] iconBytes = File.ReadAllBytes(foundPath);

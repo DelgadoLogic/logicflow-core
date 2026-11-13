@@ -18,15 +18,16 @@ import numpy as np
 from PIL import Image, ImageFilter
 import cv2
 
-PROJECT_ROOT = Path(r"c:\Users\Manuel A Delgado\Desktop\DelgadoLogic")
-SHIELD_SRC = Path(r"C:\Users\Manuel A Delgado\.gemini\antigravity\brain\df5b1b1f-f57a-425b-97cb-c60a3e067783\sentinel_core_shield_1788902686482.jpg")
-PILL_SRC = Path(r"C:\Users\Manuel A Delgado\.gemini\antigravity\brain\df5b1b1f-f57a-425b-97cb-c60a3e067783\logicflow_pill_badge_1788902699583.jpg")
+LOGICFLOW_ROOT = Path(__file__).resolve().parents[2]
+WORKSPACE_ROOT = Path(os.environ.get("DELGADOLOGIC_ROOT", str(LOGICFLOW_ROOT.parents[1])))
+SHIELD_SRC = Path(os.environ.get("LOGICFLOW_SHIELD_SRC", str(LOGICFLOW_ROOT / "branding" / "sentinel_core_shield.jpg")))
+PILL_SRC = Path(os.environ.get("LOGICFLOW_PILL_SRC", str(LOGICFLOW_ROOT / "branding" / "logicflow_pill_badge.jpg")))
 
-INSTALLER_SPRITES = PROJECT_ROOT / "Products" / "LogicFlow" / "installer" / "assets" / "sprites"
-INSTALLER_ASSETS = PROJECT_ROOT / "Products" / "LogicFlow" / "installer" / "assets"
-ICONS_DIR = PROJECT_ROOT / "Products" / "LogicFlow" / "Assets" / "Icons"
-BRANDING_DIR = PROJECT_ROOT / "Products" / "LogicFlow" / "branding"
-WEB_IMG_DIR = PROJECT_ROOT / "Website" / "site" / "public" / "assets" / "img"
+INSTALLER_SPRITES = LOGICFLOW_ROOT / "installer" / "assets" / "sprites"
+INSTALLER_ASSETS = LOGICFLOW_ROOT / "installer" / "assets"
+ICONS_DIR = LOGICFLOW_ROOT / "Assets" / "Icons"
+BRANDING_DIR = LOGICFLOW_ROOT / "branding"
+WEB_IMG_DIR = WORKSPACE_ROOT / "Website" / "site" / "public" / "assets" / "img"
 
 for d in [INSTALLER_SPRITES, INSTALLER_ASSETS, ICONS_DIR, BRANDING_DIR, WEB_IMG_DIR]:
     d.mkdir(parents=True, exist_ok=True)

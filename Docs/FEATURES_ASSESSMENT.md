@@ -3,7 +3,7 @@
 **Document Version**: 1.0.0  
 **Last Updated**: October 13, 2026  
 **Entity**: Delgado Creative Enterprises LLC d/b/a DelgadoLogic  
-**Scope**: Candid architectural and functional audit of the LogicFlow v1.0 codebase (`LogicFlow.sln`, 17 `.csproj` projects, 8 Dashboard modules + Settings, 10 CLI command groups / 53 subcommands + 6 aliases, and 994 unit/integration test methods across 51 test files).
+**Scope**: Candid architectural and functional audit of the LogicFlow v1.0 codebase (`LogicFlow.sln`, 17 `.csproj` projects, 8 Dashboard modules + Settings, 10 CLI command groups / 58 subcommands + 6 aliases, and 1,839 automated test runs across 54 test files).
 
 ---
 
@@ -21,7 +21,7 @@ At the same time, an honest engineering audit identifies specific areas where v1
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | `DelgadoLogic.Core` | `DelgadoLogic.Core.dll` | `net8.0-windows` | **Shipped** | Shared runtime contracts, `CloudLicenseBridge`, `SharedUpdateEngine`, product identity. |
 | 2 | `LogicFlow.Dashboard` | `LogicFlow.exe` | `net8.0-windows` (WPF) | **Shipped** | Primary WPF desktop GUI (`WPF-UI 4.3.0`), DWM backdrop, system tray, 8 module views + Settings, `ConsentWindow`. |
-| 3 | `LogicFlow.CLI` | `lf.exe` | `net8.0-windows` | **Shipped** | Command-line interface: **10 command groups, 53 subcommands**, + 6 top-level aliases; `--json`, `--silent`, `--force`, `--elevate`. |
+| 3 | `LogicFlow.CLI` | `lf.exe` | `net8.0-windows` | **Shipped** | Command-line interface: **10 command groups, 58 subcommands**, + 6 top-level aliases; `--json`, `--silent`, `--force`, `--elevate`. |
 | 4 | `LogicFlow.Guardian` | `LogicFlow.Guardian.dll` | `net8.0-windows` | **Shipped** | Performance & maintenance engines: `JunkCleaner`, `MemoryOptimizer`, `TurboMode`, `GameCompression` (WOF), `VolumeAwareDeduplicator`, `HyperStoreBackgroundWorker`, `FullScreenGameGuard`, `DriverAuditor`, `WinGetUpdater`, `Debloat`, `StartupOptimizer`, `WindowsTweakEngine` (92 tweaks), `SmartDiskHealth`, `DiskSpaceAnalyzer`, `DuplicateFileFinder`, `FileShredder`, `SystemRestore`. |
 | 5 | `LogicFlow.Sentinel` | `LogicFlow.Sentinel.dll` | `net8.0-windows` | **Shipped** | Security & hardening engines: `DefenderHardenerEngine` (16 ASR rules, CFA, PUA), `PersistenceScannerEngine` (WMI, Tasks, IFEO, AppInit), `DnsHostsGuardEngine`, `NetworkScanner`, `VulnerabilityScanner`, `StartupAuditor`, `Remediation`. |
 | 6 | `LogicFlow.Storage.Engine` | `LogicFlow.Storage.Engine.dll` | `net8.0-windows;net8.0` | **Shipped** | **HyperStore (V-Dense)** core library: `FastCdcChunker` (8–64 KB variable chunks), 256-bit `Blake3` (`3.0.2`) SIMD hashing, `MinHashClusterer`, `DualTierZstdCompressor` (Hot L3 / Cold L19 + dictionary via `ZstdSharp.Port 0.8.4`), `.lfc` container `LfcWriter`/`LfcReader`. |

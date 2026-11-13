@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // DelgadoLogic.Core — Shared Identity Engine
-// Hardware-bound anonymous identity used across all DelgadoLogic products.
+// Hardware-bound pseudonymous device identity used for licensing across DelgadoLogic products.
 // Privacy-first: no PII, no names, no email — only hardware fingerprint.
 // Mirrors Apple's device identity model and Adobe's machine fingerprinting.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ namespace DelgadoLogic.Core;
 /// that is shared across all installed DelgadoLogic products.
 ///
 /// The identity is:
-/// - Anonymous: no name, email, or personal data
+/// - Pseudonymous: no name, email, or personal data
 /// - Persistent: survives reboots and app reinstalls
 /// - Hardware-bound: changes if significant hardware changes
 /// - Shared: LogicFlow and Aeon Browser read the same identity file
@@ -51,7 +51,7 @@ public sealed class DelgadoLogicIdentity
 
     /// <summary>
     /// Stable hardware device ID — SHA-256 of CPU + board + BIOS + disk serials.
-    /// Used for license binding and anonymous telemetry correlation.
+    /// Used exclusively for license binding across installed DelgadoLogic products (never linked to OmniPulse telemetry installId).
     /// </summary>
     public string DeviceId => _record.DeviceId;
 

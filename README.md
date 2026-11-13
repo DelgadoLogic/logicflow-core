@@ -66,7 +66,7 @@ Products/LogicFlow/
 │   ├── LogicFlow.Scraper/            # Windows event log harvester & known KB/CVE issue correlator
 │   └── LogicFlow.VoiceAgent/         # Opt-in voice & natural-language tool dispatcher (12 system tools, NAudio MIT)
 └── tests/
-    └── LogicFlow.Tests/              # 54 test .cs files executing 1,817 automated xUnit test runs
+    └── LogicFlow.Tests/              # 54 test .cs files executing 1,839 automated xUnit test runs
 ```
 
 ---
@@ -138,7 +138,7 @@ See [`Docs/API.md`](Docs/API.md) for the complete CLI and C# assembly reference.
 # Build entire solution in Release mode
 dotnet build Products/LogicFlow/LogicFlow.sln -c Release
 
-# Run the 1,817 automated unit & integration test executions (54 test files)
+# Run the 1,839 automated unit & integration test executions (54 test files)
 dotnet test Products/LogicFlow/tests/LogicFlow.Tests/LogicFlow.Tests.csproj -c Release
 ```
 

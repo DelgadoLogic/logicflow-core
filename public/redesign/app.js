@@ -1,6 +1,6 @@
 /**
  * LogicFlow Dashboard Redesign — Interactive Frontend Controller
- * DelgadoLogic Systems LLC
+ * Delgado Creative Enterprises LLC d/b/a DelgadoLogic
  * 
  * Implements a high-fidelity state machine to simulate local PC intelligence operations
  * (Junk Cleaner, Turbo Mode, Sentinel Network Audit, Registry Surgeon, Lazarus Recovery).

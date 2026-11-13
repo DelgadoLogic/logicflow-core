@@ -1,0 +1,33 @@
+LOGICFLOW END USER LICENSE AGREEMENT & PROPRIETARY SOFTWARE NOTICE
+
+LogicFlow v1.0 — Windows System Optimization, Security Hardening, Storage Deduplication & Data Recovery Suite
+Copyright (c) 2026 Delgado Creative Enterprises LLC d/b/a DelgadoLogic. All rights reserved.
+
+================================================================================
+
+1. LICENSE GRANT & EDITION TIERS
+   Delgado Creative Enterprises LLC d/b/a DelgadoLogic ("DelgadoLogic") grants
+   you a revocable, non-exclusive, non-transferable license to install and use
+   LogicFlow on 64-bit Windows 10 (1607+) / Windows 11 systems in accordance
+   with your activated edition tier (Free, Community, Pro, Extra Seat, or Team
+   10-Pack) and the full End User License Agreement in Docs/legal/eula.md.
+
+2. SOURCE REPOSITORY & INTELLECTUAL PROPERTY
+   Unless explicitly stated otherwise in third-party notices
+   (Docs/legal/third-party-notices.md), all LogicFlow source code, binaries,
+   cryptographic keys, installers, and documentation are proprietary to
+   Delgado Creative Enterprises LLC d/b/a DelgadoLogic.
+
+3. TELEMETRY & PRIVACY DISCLOSURE (OMNIPULSE)
+   - Free Edition: Telemetry disabled (ConsentLevel.None).
+   - Community Edition: Mandatory pseudonymous Standard telemetry keyed to a
+     rotatable 128-bit random installId (zero IP persistence on disk;
+     Extended baseline strictly opt-in in strict privacy regions).
+   - Pro & Team Editions: Telemetry optional and OFF by default.
+
+4. LEGAL ENTITY, GOVERNING LAW & REFUNDS
+   Delgado Creative Enterprises LLC d/b/a DelgadoLogic
+   6218 Georgia Avenue NW, Ste 1-698, Washington, DC 20011, USA
+   Governed by the laws of the District of Columbia. Minimum user age: 16+.
+   All paid purchases carry a 60-day no-questions-asked money-back guarantee.
+   Support & Inquiries: support@delgadologic.tech

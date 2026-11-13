@@ -9,7 +9,7 @@
 
 ## 1. CLI Overview (`lf.exe`)
 
-`lf.exe` is the native command-line interface for LogicFlow v1.0. It exposes **10 command groups**, **53 subcommands**, and **6 top-level aliases** (`boost`, `turbo`, `optimize`, `rollback`, `status`, `discover`), with global flags `--json`, `--silent`, `--force`, and `--elevate`.
+`lf.exe` is the native command-line interface for LogicFlow v1.0. It exposes **10 command groups**, **58 unique subcommands** (`61` total group routes), and **6 top-level aliases** (`boost`, `turbo`, `optimize`, `rollback`, `status`, `discover`), with global flags `--json`, `--silent`, `--force`, and `--elevate`.
 
 ### 1.1 Standard Exit Codes
 | Exit Code | Meaning |
@@ -31,9 +31,9 @@ lf discover     # Alias for `lf agent discover` (outputs machine-readable JSON t
 
 ---
 
-## 2. Complete Command Group Reference (10 Groups, 53 Subcommands)
+## 2. Complete Command Group Reference (10 Groups, 58 Subcommands)
 
-### 2.1 Group 1: `sys` — System & Memory Optimization (11 Subcommands)
+### 2.1 Group 1: `sys` — System & Memory Optimization (15 Subcommands)
 | Command | Description |
 | :--- | :--- |
 | `lf sys status` | Displays OS build, CPU/RAM working-set metrics, active edition tier, and System Health Score (`0–100`). |
@@ -132,7 +132,7 @@ lf discover     # Alias for `lf agent discover` (outputs machine-readable JSON t
 ### 2.9 Group 9: `agent` — Automation & Tool Discovery (1 Subcommand)
 | Command | Description |
 | :--- | :--- |
-| `lf agent discover` | Outputs a machine-readable JSON manifest of all 10 CLI groups, 53 subcommands, parameters, and required privilege levels for local scripts and automation harnesses. |
+| `lf agent discover` | Outputs a machine-readable JSON manifest of all 10 CLI groups, 58 subcommands, parameters, and required privilege levels for local scripts and automation harnesses. |
 
 ---
 
@@ -152,7 +152,7 @@ lf discover     # Alias for `lf agent discover` (outputs machine-readable JSON t
 | :--- | :--- | :--- |
 | `DelgadoLogic.Core.dll` | `src/DelgadoLogic.Core` | `CloudLicenseBridge`, `SharedUpdateEngine`, core product metadata. |
 | `LogicFlow.exe` | `src/LogicFlow.Dashboard` | `MainWindow`, `ConsentWindow`, `SettingsManager`, `TrayIconManager`. |
-| `lf.exe` | `src/LogicFlow.CLI` | `Program`, `StoreCommands`, 10 command groups / 53 subcommands. |
+| `lf.exe` | `src/LogicFlow.CLI` | `Program`, `StoreCommands`, 10 command groups / 58 subcommands. |
 | `LogicFlow.Guardian.dll` | `src/LogicFlow.Guardian` | `JunkCleanerEngine`, `MemoryOptimizer`, `TurboMode`, `GameCompressionEngine`, `VolumeAwareDeduplicator`, `HyperStoreBackgroundWorker`, `FullScreenGameGuard`, `WindowsTweakEngine`, `DriverAuditor`, `WinGetUpdaterEngine`, `FileShredder`. |
 | `LogicFlow.Sentinel.dll` | `src/LogicFlow.Sentinel` | `DefenderHardenerEngine`, `PersistenceScannerEngine`, `DnsHostsGuardEngine`, `NetworkScanner`, `VulnerabilityScanner`, `StartupAuditor`. |
 | `LogicFlow.Storage.Engine.dll` | `src/LogicFlow.Storage.Engine` | `FastCdcChunker`, `Hash256` (`Blake3`), `MinHashClusterer`, `DualTierZstdCompressor`, `LfcWriter`, `LfcReader`. |
@@ -165,5 +165,5 @@ lf discover     # Alias for `lf agent discover` (outputs machine-readable JSON t
 | `OmniLicense.dll` | `src/OmniLicense` | `LicenseEngine`, `HwidGenerator` (4-component WMI SHA-256 Base64), `LicenseTier`. |
 | `OmniLicense.Commerce.dll` | `src/OmniLicense.Commerce` | `CommerceEngine`, catalog/order DTOs. |
 | `LogicFlow.Scraper.dll` | `src/LogicFlow.Scraper` | `IssueHarvester`, `RepoAnalyzer`. |
-| `LogicFlow.VoiceAgent.dll` | `src/LogicFlow.VoiceAgent` | Deferred `1.0.0-preview` prototype (excluded from v1.0 release). |
-| `LogicFlow.Tests.dll` | `tests/LogicFlow.Tests` | 51 test `.cs` files, 994 automated xUnit test methods. |
+| `LogicFlow.VoiceAgent.dll` | `src/LogicFlow.VoiceAgent` | Opt-in hybrid `Gemma 4 E2B` + cloud voice & natural-language tool dispatcher (12 system tools). |
+| `LogicFlow.Tests.dll` | `tests/LogicFlow.Tests` | 54 test `.cs` files, 1,839 automated xUnit test runs. |
