@@ -96,6 +96,28 @@ public sealed class LogicFlowFunctionDispatcher
         },
         new FunctionDeclaration
         {
+            Name = "network_optimize",
+            Description = "Flushes DNS cache, resets Winsock catalog, and tunes TCP auto-tuning for maximum network speed.",
+        },
+        new FunctionDeclaration
+        {
+            Name = "game_mode_toggle",
+            Description = "Activates or deactivates High-Performance Game Mode to optimize CPU priority and RAM.",
+            Parameters = new FunctionParameters
+            {
+                Properties = new()
+                {
+                    ["enable"] = new ParameterProperty
+                    {
+                        Type = "boolean",
+                        Description = "True to activate Game Mode, False to deactivate."
+                    }
+                },
+                Required = ["enable"]
+            }
+        },
+        new FunctionDeclaration
+        {
             Name = "logicflow_version",
             Description = "Returns the current LogicFlow version, edition (Community/Pro/Enterprise), and license status.",
         },
@@ -116,6 +138,8 @@ public sealed class LogicFlowFunctionDispatcher
             "memory_status"   => await MemoryStatusAsync(),
             "startup_analysis"=> await StartupAnalysisAsync(),
             "driver_scan"     => await DriverScanAsync(),
+            "network_optimize"=> await NetworkOptimizeAsync(),
+            "game_mode_toggle"=> await GameModeToggleAsync(call.Args),
             "logicflow_version"=> GetVersion(),
             _ => new { error = $"Unknown function: {call.Name}" }
         };
@@ -242,14 +266,76 @@ public sealed class LogicFlowFunctionDispatcher
 
     private async Task<object> DriverScanAsync()
     {
-        await Task.CompletedTask;
-        // Stub — wires to SmartDriverEngine from LogicFlow.Native
-        return new
+        try
         {
-            scanned  = 0,
-            outdated = 0,
-            summary  = "Driver scan requires the full LogicFlow engine. Running in limited voice mode."
-        };
+            var auditor = new DriverAuditorEngine();
+            var report = await Task.Run(() => auditor.AuditDrivers());
+            return new
+            {
+                total_drivers  = report.TotalDrivers,
+                unsigned       = report.UnsignedCount,
+                problem_devices = report.ProblemDeviceCount,
+                summary        = $"Scanned {report.TotalDrivers} drivers. Found {report.ProblemDeviceCount} problem devices and {report.UnsignedCount} unsigned drivers."
+            };
+        }
+        catch (Exception ex)
+        {
+            return new { error = ex.Message };
+        }
+    }
+
+    private async Task<object> NetworkOptimizeAsync()
+    {
+        try
+        {
+            var optimizer = new NetworkOptimizerEngine();
+            var result = await Task.Run(() => optimizer.OptimizeNetwork());
+            return new
+            {
+                dns_flushed = result.DnsFlushed,
+                winsock_reset = result.WinsockReset,
+                tcp_autotuning = result.TcpAutoTuningApplied,
+                summary = "Network optimization complete: DNS cache flushed, Winsock catalog reset, and TCP window auto-tuning set."
+            };
+        }
+        catch (Exception ex)
+        {
+            return new { error = ex.Message };
+        }
+    }
+
+    private async Task<object> GameModeToggleAsync(JsonElement args)
+    {
+        try
+        {
+            var enable = args.TryGetProperty("enable", out var e) && e.GetBoolean();
+            var gameMode = new LogicFlow.Sentinel.GameModeEngine();
+
+            if (enable)
+            {
+                var status = await Task.Run(() => gameMode.ActivateGameMode());
+                return new
+                {
+                    active = status.IsActive,
+                    power_scheme = status.ActivePowerScheme,
+                    services_paused = status.PausedServiceCount,
+                    summary = "High-Performance Game Mode activated. Power scheme set to High Performance and background telemetry paused."
+                };
+            }
+            else
+            {
+                var status = await Task.Run(() => gameMode.DeactivateGameMode());
+                return new
+                {
+                    active = false,
+                    summary = "Game Mode deactivated. Normal system power scheme and background services restored."
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            return new { error = ex.Message };
+        }
     }
 
     private static object GetVersion() => new

@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\OmniCore.Engine\OmniCore.Engine.csproj" />
     <ProjectReference Include="..\..\src\OmniLicense\OmniLicense.csproj" />
     <ProjectReference Include="..\..\src\LogicFlow.Sentinel\LogicFlow.Sentinel.csproj" />
+    <ProjectReference Include="..\..\src\LogicFlow.Guardian\LogicFlow.Guardian.csproj" />
     <ProjectReference Include="..\..\src\DelgadoLogic.Core\DelgadoLogic.Core.csproj" />
   </ItemGroup>
 

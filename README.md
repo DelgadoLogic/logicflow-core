@@ -113,8 +113,13 @@ See [EULA.txt](Docs/EULA.txt) for full license terms.
 - [x] Real-time Dashboard health tiles & visual overhaul
 - [x] Auto-updater consuming sovereign manifest
 - [x] Settings tab wiring & custom toggle styles
+- [x] Deep Uninstaller & Leftover Residual Tracker (`UninstallerEngine.cs`)
+- [x] Network & DNS Optimizer Engine (`NetworkOptimizerEngine.cs`)
+- [x] Game & High-Performance Mode Engine (`GameModeEngine.cs`)
+- [x] PnP Driver Audit & Error Detector (`DriverAuditorEngine.cs`)
+- [x] VoiceAgent function dispatcher integration for local AI control
+- [x] 58/58 unit test suite verification (`dotnet test --configuration Release`)
 - [ ] Stripe payment integration (pending EIN)
-- [ ] Sentinel CVE feed cross-reference
 - [ ] Windows 7 SP1 compatibility testing
 
 ---
