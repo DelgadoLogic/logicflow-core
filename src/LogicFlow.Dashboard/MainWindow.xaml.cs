@@ -29,6 +29,11 @@ public partial class MainWindow : Window
     private readonly SmartDiskReader _smartReader = new(NullLogger<SmartDiskReader>.Instance);
     private readonly AutoUpdateEngine _updateEngine = new("1.0.0");
 
+    // ─── Sentinel engines (Sprint 3 — 10-vector) ───
+    private readonly NetworkScanner _networkScanner = new(NullLogger<NetworkScanner>.Instance);
+    private readonly StartupAuditor _startupAuditor = new(NullLogger<StartupAuditor>.Instance);
+    private readonly RemediationEngine _remediationEngine = new(NullLogger<RemediationEngine>.Instance);
+
     // ─── New engines (Sprint 2-3) ───
     private readonly JunkCleanerEngine _junkCleaner = new();
     private readonly MemoryOptimizer _memoryOptimizer = new();
