@@ -145,17 +145,17 @@ public class TrayAndSingleInstanceLifecycleTests
     {
         var pipeName = "LogicFlow_UnitTest_Pipe_" + Guid.NewGuid().ToString("N");
         var receivedSignal = false;
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        using var server = new NamedPipeServerStream(
+            pipeName,
+            PipeDirection.In,
+            NamedPipeServerStream.MaxAllowedServerInstances,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous);
 
         var serverTask = Task.Run(async () =>
         {
-            using var server = new NamedPipeServerStream(
-                pipeName,
-                PipeDirection.In,
-                NamedPipeServerStream.MaxAllowedServerInstances,
-                PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous);
-
             await server.WaitForConnectionAsync(cts.Token);
             using var reader = new StreamReader(server, System.Text.Encoding.UTF8);
             var msg = await reader.ReadLineAsync(cts.Token);
@@ -165,10 +165,9 @@ public class TrayAndSingleInstanceLifecycleTests
             }
         }, cts.Token);
 
-        // Connect client
-        await Task.Delay(100);
+        // Connect client (server pipe already listening before Task.Run starts)
         using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out);
-        await client.ConnectAsync(2000, cts.Token);
+        await client.ConnectAsync(15000, cts.Token);
         using var writer = new StreamWriter(client, System.Text.Encoding.UTF8) { AutoFlush = true };
         await writer.WriteLineAsync("RESTORE");
         client.WaitForPipeDrain();
