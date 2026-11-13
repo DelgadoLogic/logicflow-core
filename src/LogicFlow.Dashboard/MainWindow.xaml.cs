@@ -623,6 +623,167 @@ public partial class MainWindow : Window
         catch { }
     }
 
+    // ─── Network Security Scanner (10-vector) ───
+    private NetworkScanReport? _lastNetworkScanReport;
+
+    private async void OnNetworkScan(object s, RoutedEventArgs e)
+    {
+        ShowLoading("Running 10-vector network security scan...");
+        NetworkFindingsList.Items.Clear();
+        NetworkScanStatus.Text = "Scanning...";
+        try
+        {
+            var report = await _networkScanner.FullScanAsync();
+            _lastNetworkScanReport = report;
+
+            NetworkSummaryBar.Visibility = Visibility.Visible;
+
+            // Build finding cards from the structured report
+            var cards = new List<(string Title, string Detail, string BrushKey)>();
+
+            // Open ports (Critical/High)
+            foreach (var p in report.OpenPorts)
+            {
+                var sev = p.Severity == FindingSeverity.Critical ? "Critical" : "High";
+                cards.Add(($"{(sev == "Critical" ? "🔴" : "⚠")} [Open Port] {p.Service} :{p.Port}",
+                    $"{sev} — {p.Risk}", sev == "Critical" ? "DangerRedBrush" : "WarningAmberBrush"));
+            }
+
+            // Firewall disabled
+            if (report.FirewallStatus.IsDisabled)
+                cards.Add(("🔴 [Firewall] Windows Firewall Disabled",
+                    "Critical — One or more firewall profiles are disabled", "DangerRedBrush"));
+
+            // RDP Exposure
+            if (report.RdpExposure.IsExposed)
+                cards.Add(("🔴 [RDP] Remote Desktop Exposed",
+                    "Critical — RDP enabled without Network Level Authentication", "DangerRedBrush"));
+
+            // SMBv1
+            if (report.SmbV1Status.IsEnabled)
+                cards.Add(("🔴 [SMBv1] Legacy Protocol Enabled",
+                    "Critical — WannaCry/EternalBlue attack vector active", "DangerRedBrush"));
+
+            // WinRM
+            if (report.WinRmStatus.IsEnabled)
+                cards.Add(("⚠ [WinRM] Remote Management Active",
+                    "Warning — Lateral movement risk via WinRM", "WarningAmberBrush"));
+
+            // UPnP
+            if (report.UpnpStatus.IsEnabled)
+                cards.Add(("⚠ [UPnP] Automatic Port Forwarding",
+                    "Warning — SSDP service is active", "WarningAmberBrush"));
+
+            // DNS Leaks
+            if (report.DnsLeakResults.IsLeaking)
+                cards.Add(("⚠ [DNS] Potential DNS Leak",
+                    $"Warning — {report.DnsLeakResults.PotentialLeaks.Count} non-privacy DNS servers detected", "WarningAmberBrush"));
+
+            // WiFi
+            if (report.WifiSecurity.IsVulnerable)
+                cards.Add(("⚠ [WiFi] Weak Wireless Security",
+                    $"Warning — {report.WifiSecurity.AuthType} / {report.WifiSecurity.Cipher}", "WarningAmberBrush"));
+
+            // Open Shares
+            foreach (var share in report.OpenShares)
+                cards.Add(("ℹ [Shares] " + share.Name,
+                    $"Info — Path: {share.Path}", "BrandCyanBrush"));
+
+            // ARP Devices (info)
+            if (report.ArpDevices.Count > 0)
+                cards.Add(($"ℹ [ARP] {report.ArpDevices.Count} Devices on Local Network",
+                    "Info — Review device list for unauthorized devices", "BrandCyanBrush"));
+
+            var criticalCount = cards.Count(c => c.BrushKey == "DangerRedBrush");
+            var warningCount = cards.Count(c => c.BrushKey == "WarningAmberBrush");
+            var infoCount = cards.Count(c => c.BrushKey == "BrandCyanBrush");
+
+            NetworkSummaryText.Text = $"Risk Score: {report.RiskScore}/100 — " + (criticalCount > 0
+                ? $"🔴 {criticalCount} critical, {warningCount} warnings, {infoCount} informational"
+                : warningCount > 0
+                    ? $"⚠ {warningCount} warnings, {infoCount} informational"
+                    : $"✅ {infoCount} informational — network looks secure");
+            NetworkSummaryText.Foreground = report.RiskScore >= 30
+                ? (Brush)FindResource("DangerRedBrush")
+                : report.RiskScore > 0
+                    ? (Brush)FindResource("WarningAmberBrush")
+                    : (Brush)FindResource("SuccessGreenBrush");
+
+            BtnRemediateNetwork.Visibility = (criticalCount + warningCount) > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            foreach (var card in cards)
+                NetworkFindingsList.Items.Add(MakeResultCard(card.Title, card.Detail, card.BrushKey));
+
+            NetworkScanStatus.Text = $"Scan complete — {report.TotalFindings} findings, risk score {report.RiskScore}/100";
+            NetworkScanStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+        }
+        catch (Exception ex) { NetworkScanStatus.Text = $"Error: {ex.Message}"; }
+        finally { HideLoading(); }
+    }
+
+    private async void OnRemediateAll(object s, RoutedEventArgs e)
+    {
+        if (_lastNetworkScanReport == null) return;
+        ShowLoading("Applying security remediations...");
+        try
+        {
+            var report = await _remediationEngine.AutoRemediateAsync(_lastNetworkScanReport, dryRun: false);
+            NetworkScanStatus.Text = $"✅ Applied {report.SuccessCount}/{report.TotalActions} remediations";
+            NetworkScanStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+
+            // Re-scan to show updated state
+            OnNetworkScan(s, e);
+        }
+        catch (Exception ex) { NetworkScanStatus.Text = $"Remediation error: {ex.Message}"; }
+        finally { HideLoading(); }
+    }
+
+    // ─── Startup Security Audit ───
+    private async void OnStartupAudit(object s, RoutedEventArgs e)
+    {
+        ShowLoading("Auditing startup entries for threats...");
+        StartupAuditList.Items.Clear();
+        StartupAuditStatus.Text = "Scanning...";
+        try
+        {
+            var report = await Task.Run(() => _startupAuditor.Audit());
+            var suspicious = report.Entries.Where(e2 => e2.Classification == StartupClassification.Suspicious).ToList();
+            var safe = report.Entries.Where(e2 => e2.Classification != StartupClassification.Suspicious).ToList();
+
+            StartupAuditSummaryBar.Visibility = Visibility.Visible;
+            StartupAuditSummaryText.Text = suspicious.Count > 0
+                ? $"🔴 {suspicious.Count} suspicious entries found out of {report.TotalEntries} total"
+                : $"✅ All {report.TotalEntries} startup entries appear safe";
+            StartupAuditSummaryText.Foreground = suspicious.Count > 0
+                ? (Brush)FindResource("DangerRedBrush")
+                : (Brush)FindResource("SuccessGreenBrush");
+
+            foreach (var entry in suspicious)
+            {
+                StartupAuditList.Items.Add(MakeResultCard(
+                    $"🔴 {entry.Name}",
+                    $"Reason: {entry.Reason ?? "Unknown"} | Source: {entry.Source} | Command: {entry.Command}",
+                    "DangerRedBrush"));
+            }
+
+            foreach (var entry in safe.Take(10))
+            {
+                StartupAuditList.Items.Add(MakeResultCard(
+                    $"✅ {entry.Name}",
+                    $"Source: {entry.Source}",
+                    "SuccessGreenBrush"));
+            }
+            if (safe.Count > 10)
+                StartupAuditList.Items.Add(MakeResultCard($"... and {safe.Count - 10} more safe entries", "", "TextSecondaryBrush"));
+
+            StartupAuditStatus.Text = $"Audit complete — {report.TotalEntries} entries scanned";
+            StartupAuditStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+        }
+        catch (Exception ex) { StartupAuditStatus.Text = $"Error: {ex.Message}"; }
+        finally { HideLoading(); }
+    }
+
+
     // ─── Privacy Scrub (adapted from Optimizer CleanHelper) ───
     private async void OnPrivacyScrub(object s, RoutedEventArgs e)
     {

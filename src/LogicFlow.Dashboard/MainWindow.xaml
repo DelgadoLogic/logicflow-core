@@ -265,6 +265,40 @@
                                 <ItemsControl x:Name="ScrubList" Margin="0,8,0,0" Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
+
+                        <!-- Network Security Scanner (10-Vector) -->
+                        <Border Style="{StaticResource GlassPanel}" Margin="0,20,0,20">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="NETWORK SECURITY SCANNER" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <Button Content="🌐 Full Network Scan" Style="{StaticResource ActionButton}" Click="OnNetworkScan" Margin="0,0,8,0"/>
+                                        <Button x:Name="BtnRemediateNetwork" Content="🔧 Fix All" Style="{StaticResource ActionButton}" Click="OnRemediateAll"
+                                                Visibility="Collapsed" Background="#E53935"/>
+                                    </StackPanel>
+                                </DockPanel>
+                                <TextBlock x:Name="NetworkScanStatus" Text="10-vector scan: ports, ARP, DNS, firewall, WiFi, RDP, UPnP, SMBv1, WinRM, shares" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <Border x:Name="NetworkSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
+                                    <TextBlock x:Name="NetworkSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </Border>
+                                <ItemsControl x:Name="NetworkFindingsList" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Startup Security Audit -->
+                        <Border Style="{StaticResource GlassPanel}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,12">
+                                    <TextBlock Text="STARTUP SECURITY AUDIT" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <Button DockPanel.Dock="Right" Content="🔍 Audit Startup" Style="{StaticResource ActionButton}" Click="OnStartupAudit"/>
+                                </DockPanel>
+                                <TextBlock x:Name="StartupAuditStatus" Text="Scan registry and startup folders for suspicious entries (encoded PowerShell, mshta, certutil)" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <Border x:Name="StartupAuditSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
+                                    <TextBlock x:Name="StartupAuditSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </Border>
+                                <ItemsControl x:Name="StartupAuditList" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
 
