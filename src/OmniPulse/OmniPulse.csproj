@@ -11,9 +11,9 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="LogicFlow.Tests" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.*" />
-    <PackageReference Include="System.Diagnostics.EventLog" Version="8.*" />
-    <PackageReference Include="System.Management" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="11.*" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="11.*" />
+    <PackageReference Include="System.Management" Version="11.*" />
   </ItemGroup>
   <ItemGroup Condition="'$(LogicFlowIngestKey)' != ''">
     <!-- Public per-build ingest key used to sign telemetry bodies (HMAC-SHA256). Pass /p:LogicFlowIngestKey=... in release builds. -->
