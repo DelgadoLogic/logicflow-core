@@ -5,6 +5,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace LogicFlow.Guardian;
@@ -68,52 +70,52 @@ public sealed class JunkCleanerEngine
 
     // ─── Scan (Preview mode — no files deleted) ─────────────────────────
 
-    /// <summary>
-    /// Scans all junk categories and returns file lists with sizes.
-    /// No files are deleted during scan — this is preview mode.
-    /// </summary>
     public List<JunkScanResult> Scan()
     {
-        _logger?.LogInformation("Starting junk file scan...");
-        var results = new List<JunkScanResult>();
+        _logger?.LogInformation("Starting parallel junk file scan...");
+        var tasks = new List<Task<JunkScanResult>>
+        {
+            Task.Run(() => ScanDirectory(
+                JunkCategory.WindowsTemp, "Windows Temp Files",
+                "System temporary files that can be safely removed",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp"))),
 
-        results.Add(ScanDirectory(
-            JunkCategory.WindowsTemp, "Windows Temp Files",
-            "System temporary files that can be safely removed",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp")));
+            Task.Run(() => ScanDirectory(
+                JunkCategory.UserTemp, "User Temp Files",
+                "Your temporary files from apps and installations",
+                Path.GetTempPath())),
 
-        results.Add(ScanDirectory(
-            JunkCategory.UserTemp, "User Temp Files",
-            "Your temporary files from apps and installations",
-            Path.GetTempPath()));
+            Task.Run(ScanBrowserCaches),
 
-        results.Add(ScanBrowserCaches());
+            Task.Run(() => ScanDirectory(
+                JunkCategory.WindowsLogs, "Windows Log Files",
+                "System log files (.log, .etl) that accumulate over time",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Logs"),
+                new[] { "*.log", "*.etl", "*.evtx" })),
 
-        results.Add(ScanDirectory(
-            JunkCategory.WindowsLogs, "Windows Log Files",
-            "System log files (.log, .etl) that accumulate over time",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Logs"),
-            new[] { "*.log", "*.etl", "*.evtx" }));
+            Task.Run(() => ScanDirectory(
+                JunkCategory.WindowsUpdateCache, "Windows Update Cache",
+                "Downloaded update files — safe to remove after updates install",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "SoftwareDistribution", "Download"))),
 
-        results.Add(ScanDirectory(
-            JunkCategory.WindowsUpdateCache, "Windows Update Cache",
-            "Downloaded update files — safe to remove after updates install",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "SoftwareDistribution", "Download")));
+            Task.Run(ScanThumbnailCache),
 
-        results.Add(ScanThumbnailCache());
+            Task.Run(() => ScanDirectory(
+                JunkCategory.Prefetch, "Prefetch Data",
+                "App launch prefetch data — Windows rebuilds this automatically",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Prefetch"),
+                new[] { "*.pf" })),
 
-        results.Add(ScanDirectory(
-            JunkCategory.Prefetch, "Prefetch Data",
-            "App launch prefetch data — Windows rebuilds this automatically",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Prefetch"),
-            new[] { "*.pf" }));
+            Task.Run(ScanCrashDumps),
 
-        results.Add(ScanCrashDumps());
+            Task.Run(() => ScanDirectory(
+                JunkCategory.InstallerCache, "Installer Temp Files",
+                "Leftover files from software installations",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Installer", "$PatchCache$")))
+        };
 
-        results.Add(ScanDirectory(
-            JunkCategory.InstallerCache, "Installer Temp Files",
-            "Leftover files from software installations",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Installer", "$PatchCache$")));
+        var resultsArray = Task.WhenAll(tasks).GetAwaiter().GetResult();
+        var results = new List<JunkScanResult>(resultsArray);
 
         var totalBytes = results.Sum(r => r.TotalBytes);
         var totalFiles = results.Sum(r => r.FileCount);
@@ -135,38 +137,44 @@ public sealed class JunkCleanerEngine
         int filesDeleted = 0;
         int filesFailed = 0;
         var errors = new List<string>();
+        var errorsLock = new object();
 
-        foreach (var category in scanResults.Where(r => r.IsSelected))
+        var selectedCategories = scanResults.Where(r => r.IsSelected).ToList();
+
+        foreach (var category in selectedCategories)
         {
             _logger?.LogInformation("Cleaning {Category}...", category.DisplayName);
 
-            foreach (var file in category.Files)
+            Parallel.ForEach(category.Files, new ParallelOptions { MaxDegreeOfParallelism = 8 }, file =>
             {
                 try
                 {
                     if (File.Exists(file.Path))
                     {
-                        var size = new FileInfo(file.Path).Length;
+                        var size = file.SizeBytes; // Reuse cached size from scan phase
                         File.Delete(file.Path);
-                        bytesCleaned += size;
-                        filesDeleted++;
+                        Interlocked.Add(ref bytesCleaned, size);
+                        Interlocked.Increment(ref filesDeleted);
                     }
                     else if (Directory.Exists(file.Path))
                     {
-                        var dirSize = GetDirectorySize(file.Path);
+                        var dirSize = file.SizeBytes; // Reuse cached size from scan phase
                         Directory.Delete(file.Path, true);
-                        bytesCleaned += dirSize;
-                        filesDeleted++;
+                        Interlocked.Add(ref bytesCleaned, dirSize);
+                        Interlocked.Increment(ref filesDeleted);
                     }
                 }
                 catch (Exception ex)
                 {
-                    filesFailed++;
-                    // Only log first few errors to avoid spam
-                    if (errors.Count < 10)
-                        errors.Add($"{Path.GetFileName(file.Path)}: {ex.Message}");
+                    Interlocked.Increment(ref filesFailed);
+                    lock (errorsLock)
+                    {
+                        // Only log first few errors to avoid spam
+                        if (errors.Count < 10)
+                            errors.Add($"{Path.GetFileName(file.Path)}: {ex.Message}");
+                    }
                 }
-            }
+            });
         }
 
         _logger?.LogInformation("Cleaned {Files} files, freed {Size}. {Failed} files locked/skipped.",
@@ -212,9 +220,15 @@ public sealed class JunkCleanerEngine
         try
         {
             patterns ??= new[] { "*" };
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.System | FileAttributes.ReparsePoint
+            };
             foreach (var pattern in patterns)
             {
-                foreach (var file in Directory.EnumerateFiles(path, pattern, SearchOption.AllDirectories))
+                foreach (var file in Directory.EnumerateFiles(path, pattern, options))
                 {
                     try
                     {
@@ -262,12 +276,18 @@ public sealed class JunkCleanerEngine
             Path.Combine(localAppData, "Opera Software", "Opera Stable", "Cache"),
         };
 
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true
+        };
+
         foreach (var cachePath in browserCachePaths)
         {
             if (!Directory.Exists(cachePath)) continue;
             try
             {
-                foreach (var file in Directory.EnumerateFiles(cachePath, "*", SearchOption.AllDirectories))
+                foreach (var file in Directory.EnumerateFiles(cachePath, "*", options))
                 {
                     try
                     {
@@ -386,7 +406,12 @@ public sealed class JunkCleanerEngine
     {
         try
         {
-            return Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true
+            };
+            return Directory.EnumerateFiles(path, "*", options)
                 .Sum(f => { try { return new FileInfo(f).Length; } catch { return 0; } });
         }
         catch { return 0; }
