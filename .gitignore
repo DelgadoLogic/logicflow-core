@@ -68,3 +68,8 @@ Installer/_archive/
 Docs/_archive/
 TEST_INFRA.md
 TEST_READY.md
+
+ORIGINAL_REQUEST.md
+MOVED_TO.txt
+.agents/
+sa.json
