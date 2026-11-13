@@ -14,7 +14,7 @@ function Get-SystemMetrics {
     $processes = Get-Process
     $os = Get-WmiObject Win32_OperatingSystem
     
-    $threads = ($processes | Measure-Object -Property Threads -Sum).Sum
+    $threads = ($processes | ForEach-Object { $_.Threads.Count } | Measure-Object -Sum).Sum
     $handles = ($processes | Measure-Object -Property HandleCount -Sum).Sum
     $ramUsageMB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1024, 2)
     
