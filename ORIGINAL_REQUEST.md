@@ -36,3 +36,45 @@ Integrity mode: development
 
 ### Go-To-Market Playbook
 - [ ] A complete Go-To-Market Playbook saved as a markdown document in `Docs/marketing_playbook.md` detailing positioning, monetization, and acquisition strategies.
+
+## Follow-up — 2026-06-06T10:00:43-04:00
+
+Rebuild the main UI of the LogicFlow WPF desktop application to natively match the premium glassmorphic look, HSL gradients, Outfit/Inter typography, and interactive micro-animations demonstrated in the web prototype under `public/redesign/` using the WPF UI library.
+
+Working directory: `D:\BUSINESS\Projects\Active\DelgadoLogic\Products\LogicFlow`
+Integrity mode: development
+
+## Requirements
+
+### R1. Native WPF UI Rebuild using WPF UI Library
+- Add the `Wpf.Ui` package reference to `LogicFlow.Dashboard.csproj`.
+- Reconstruct `MainWindow.xaml` and `MainWindow.xaml.cs` to feature the sidebar navigation, circular health dials, active processes table, and Pulse AI console panel from the mockup.
+- Embed the Inter and Outfit font files into the application resource dictionary and map them globally.
+
+### R2. High-End Glassmorphic Styling & Transparency
+- Implement a dark-space HSL color palette matching the prototype theme.
+- Enable native Windows 11 Mica/Acrylic transparency backdrops on the window using Desktop Window Manager (DWM) APIs (via `Wpf.Ui.Appearance.WindowBackgroundManager` or direct Win32 `DwmSetWindowAttribute` P/Invokes).
+- Apply gradient border glows, card groupings, and subtle drop shadow effects to replicate the glass cards look.
+
+### R3. Backend Interop & Telemetry Binding
+- Bind the action buttons (e.g., Run Scan, Toggle Turbo Mode, Clean Registry, Recover Files) to their corresponding C# backend engines (`JunkCleanerEngine`, `TurboMode`, `RegistrySurgeon`, `Lazarus`).
+- Update the UI telemetry values dynamically using data binding or event notifications from the core services.
+
+### R4. Compilation & Verification
+- Ensure the entire solution builds cleanly under `.NET 8` without compilation warnings.
+- Build a testing harness to run the WPF GUI in a headless state or capture launch telemetry.
+- Run all 52 unit tests (`dotnet test`) to verify that core functionality remains unaffected.
+
+## Acceptance Criteria
+
+### Visual Redesign
+- [ ] LogicFlow application launches with rounded glassmorphic cards, deep-space dark gradient backgrounds, and Inter/Outfit typography.
+- [ ] The window uses native Windows 11 Mica/Acrylic transparency effects.
+- [ ] Active and hover states feature smooth micro-animations.
+
+### Technical & Functional
+- [ ] All dashboard buttons successfully invoke their native C# engine routines.
+- [ ] Real-time telemetry values are updated dynamically on the dashboard.
+- [ ] Executing `dotnet build` succeeds with zero errors.
+- [ ] Executing `dotnet test` completes with 52/52 passing tests.
+

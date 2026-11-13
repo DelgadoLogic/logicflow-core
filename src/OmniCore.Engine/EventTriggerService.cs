@@ -1,3 +1,4 @@
+#pragma warning disable CA1416
 // OmniCore.Engine — Event Trigger Service
 // Proprietary implementation by DelgadoLogic.Tech
 // Uses WMI event subscriptions for ultra-low-resource background monitoring

@@ -1,3 +1,4 @@
+#pragma warning disable CA1416
 // OmniCore.Engine — System Profiler
 // Proprietary implementation by DelgadoLogic.Tech
 // Hardware fingerprinting, OS telemetry, and resource monitoring

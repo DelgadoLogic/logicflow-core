@@ -39,4 +39,15 @@
     <Resource Include="..\..\branding\Banner_Header.jpg" Link="Assets\Banner_Header.jpg" />
     <Resource Include="..\..\branding\Favicon.jpg" Link="Assets\Favicon.jpg" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Fonts\Outfit\Outfit[wght].ttf" />
+    <Resource Include="Assets\Fonts\Inter\Inter_18pt-Regular.ttf" />
+    <Resource Include="Assets\Fonts\Inter\Inter_18pt-Bold.ttf" />
+    <Resource Include="Assets\Fonts\Inter\Inter_18pt-SemiBold.ttf" />
+    <Resource Include="Assets\Fonts\Inter\Inter_18pt-Medium.ttf" />
+    <Resource Include="Assets\Fonts\Inter\Inter_18pt-Light.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
 </Project>

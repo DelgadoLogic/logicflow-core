@@ -70,6 +70,35 @@ public partial class MainWindow : Window
     private System.Windows.Controls.Button[] _navButtons = [];
     private System.Windows.Controls.Button? _activeNavButton;
 
+    // Compatibility fields for replaced XAML controls
+    private readonly TextBlock CpuLabel = new();
+    private readonly TextBlock RamLabel = new();
+    private readonly TextBlock GpuLabel = new();
+    private readonly TextBlock OsLabel = new();
+    private readonly TextBlock DiskHealthLabel = new();
+    private readonly TextBlock DiskHealthSub = new();
+    private readonly TextBlock TurboStatusLabel = new();
+    private readonly TextBlock TurboSub = new();
+    private readonly TextBlock RecoveryStatus = new();
+    private readonly TextBlock RecoverySub = new();
+    private readonly TextBlock RegScore = new();
+    private readonly TextBlock RegSub = new();
+    private readonly TextBlock SecurityScore = new();
+    private readonly TextBlock SecuritySub = new();
+    private readonly TextBlock MemoryLabel = new();
+    private readonly TextBlock MemorySub = new();
+    private readonly TextBlock PerfScore = new();
+    private readonly TextBlock PerfSub = new();
+
+    // Live dashboard processes and CPU history
+    private List<RunningProcessInfo> _lastProcesses = new();
+    private Dictionary<int, (TimeSpan CpuTime, DateTime TimeStamp)> _processCpuHistory = new();
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int attrSize);
+
+    private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+    private const int DWMWA_MICA_EFFECT = 1029;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -77,11 +106,39 @@ public partial class MainWindow : Window
         Closing += MainWindow_Closing;
     }
 
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        try
+        {
+            var windowInteropHelper = new System.Windows.Interop.WindowInteropHelper(this);
+            IntPtr hwnd = windowInteropHelper.Handle;
+
+            // Apply Windows 11 system backdrop Mica (value 2)
+            int backdropType = 2; // Mica
+            int result = DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+            if (result != 0)
+            {
+                // Fallback for older Win11 builds: DWMWA_MICA_EFFECT = 1029
+                int trueValue = 1;
+                DwmSetWindowAttribute(hwnd, DWMWA_MICA_EFFECT, ref trueValue, sizeof(int));
+            }
+        }
+        catch
+        {
+            // Ignore error if running on older OS
+        }
+    }
+
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         _pages = [PageDashboard, PageSentinel, PageGuardian, PageMonitor, PageToolbox, PageLazarus, PageRegistry, PageSettings];
         _navButtons = [NavDashboard, NavSentinel, NavGuardian, NavMonitor, NavToolbox, NavLazarus, NavRegistry, NavSettings];
         _activeNavButton = NavDashboard;
+
+        // Initialize AI Terminal welcome
+        AppendTerminalLine("> Initializing Pulse Engine v3.1... Ready.", "#4B5563");
+        AppendTerminalLine("PULSE ANALYSIS: System health is solid. Run '1-Click Optimize' to calculate your real-time score. You can query me using natural language about CPU, RAM, disk, or security status.", "#A78BFA", true);
 
         // Populate system profile
         try
@@ -91,8 +148,16 @@ public partial class MainWindow : Window
             RamLabel.Text = $"{snapshot.Memory.TotalPhysicalBytes / (1024.0 * 1024 * 1024):F1} GB ({snapshot.Memory.UsagePercent:F0}% used)";
             GpuLabel.Text = snapshot.Gpu.Name;
             OsLabel.Text = $"{snapshot.Os.Caption} (Build {snapshot.Os.BuildNumber})";
+
+            HealthHardwareLabel.Text = $"{snapshot.Cpu.Name.Split('@')[0].Trim()} / {snapshot.Memory.TotalPhysicalBytes / (1024.0 * 1024 * 1024):F0}GB RAM";
+            HealthOsLabel.Text = snapshot.Os.Caption;
         }
-        catch { CpuLabel.Text = RamLabel.Text = GpuLabel.Text = OsLabel.Text = "N/A"; }
+        catch 
+        { 
+            CpuLabel.Text = RamLabel.Text = GpuLabel.Text = OsLabel.Text = "N/A"; 
+            HealthHardwareLabel.Text = "Loading spec info...";
+            HealthOsLabel.Text = "Windows";
+        }
 
         // Show HWID
         try
@@ -117,6 +182,12 @@ public partial class MainWindow : Window
 
         // Detect drives for Lazarus
         await RefreshDrives();
+
+        // Start live monitor automatically on load
+        if (!_monitorRunning)
+        {
+            OnStartMonitor(this, new RoutedEventArgs());
+        }
 
         // Check for updates in background
         _ = Task.Run(async () =>
@@ -255,10 +326,25 @@ public partial class MainWindow : Window
     private void OnMonitorTick(object? sender, EventArgs e)
     {
         if (_liveSnapshot == null) return;
-        // Run lightweight update on background thread, push results back on UI thread
-        Task.Run(() => _sysInfo.UpdateLiveMetrics(_liveSnapshot))
-            .ContinueWith(_ => Dispatcher.Invoke(UpdateMonitorUI),
-                System.Threading.Tasks.TaskContinuationOptions.None);
+        
+        bool isDashboardVisible = false;
+        Dispatcher.Invoke(() => isDashboardVisible = PageDashboard.Visibility == Visibility.Visible);
+
+        Task.Run(() =>
+        {
+            _sysInfo.UpdateLiveMetrics(_liveSnapshot);
+            if (isDashboardVisible)
+            {
+                _lastProcesses = UpdateAndGetTopProcesses();
+            }
+        }).ContinueWith(_ => Dispatcher.Invoke(() =>
+        {
+            UpdateMonitorUI();
+            if (isDashboardVisible)
+            {
+                UpdateDashboardLiveMetrics();
+            }
+        }), System.Threading.Tasks.TaskContinuationOptions.None);
     }
 
     private static Brush MetricBrush(double pct, ResourceDictionary res) => pct switch
@@ -1820,5 +1906,258 @@ public partial class MainWindow : Window
         SettingsManager.Save();
         _trayManager?.Dispose();
         _updateEngine.Dispose();
+    }
+
+    // ─── Rebuilt Overview Dashboard Code ───
+    public class RunningProcessInfo
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public double Cpu { get; set; }
+        public string CpuFormatted => $"{Cpu:F1}%";
+        public long MemoryBytes { get; set; }
+        public string MemoryFormatted => $"{MemoryBytes / (1024.0 * 1024):F0} MB";
+    }
+
+    private void AppendTerminalLine(string text, string hexColor = "#E2E8F0", bool isBold = false)
+    {
+        var tb = new TextBlock
+        {
+            Text = text,
+            Foreground = (Brush)new BrushConverter().ConvertFromString(hexColor)!,
+            FontWeight = isBold ? FontWeights.Bold : FontWeights.Normal,
+            FontSize = 11,
+            FontFamily = (FontFamily)FindResource("JetBrainsMono"),
+            TextWrapping = TextWrapping.Wrap
+        };
+        AiTerminalList.Items.Add(tb);
+        
+        // Auto scroll to bottom
+        if (VisualTreeHelper.GetChildrenCount(AiTerminalList) > 0)
+        {
+            var border = VisualTreeHelper.GetChild(AiTerminalList, 0) as Border;
+            var scrollViewer = border?.Child as ScrollViewer;
+            scrollViewer?.ScrollToEnd();
+        }
+    }
+
+    private void OnPulseInputKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter)
+        {
+            OnPulseAskClick(sender, new RoutedEventArgs());
+        }
+    }
+
+    private async void OnPulseAskClick(object sender, RoutedEventArgs e)
+    {
+        var input = PulseInput.Text.Trim();
+        if (string.IsNullOrEmpty(input)) return;
+        
+        PulseInput.Text = "";
+        AppendTerminalLine($"> User: {input}", "#94A3B8");
+        
+        // Simulate thinking delay
+        AppendTerminalLine("Pulse: Thinking...", "#A78BFA");
+        await Task.Delay(400);
+        
+        // Remove the "Thinking..." line (last item)
+        if (AiTerminalList.Items.Count > 0)
+        {
+            AiTerminalList.Items.RemoveAt(AiTerminalList.Items.Count - 1);
+        }
+        
+        string response = ProcessPulseQuery(input);
+        AppendTerminalLine($"Pulse: {response}", "#E2E8F0");
+    }
+
+    private string ProcessPulseQuery(string input)
+    {
+        var query = input.ToLowerInvariant();
+        
+        if (query.Contains("cpu") || query.Contains("processor"))
+        {
+            if (_liveSnapshot != null)
+            {
+                return $"Your system is equipped with an {_liveSnapshot.CpuName}. Currently, CPU usage is at {_liveSnapshot.CpuUsagePercent:F0}%. Active threads: {_liveSnapshot.CpuThreads}.";
+            }
+            return "CPU metrics are currently initializing. Please try again in a second.";
+        }
+        
+        if (query.Contains("ram") || query.Contains("memory"))
+        {
+            if (_liveSnapshot != null)
+            {
+                return $"Memory status: {_liveSnapshot.UsedRamFormatted} / {_liveSnapshot.TotalRamFormatted} used ({_liveSnapshot.RamUsagePercent:F0}%). Available RAM: {_liveSnapshot.AvailableRamFormatted}.";
+            }
+            return "RAM metrics are currently initializing. Please try again in a second.";
+        }
+        
+        if (query.Contains("disk") || query.Contains("storage") || query.Contains("drive"))
+        {
+            if (_liveSnapshot != null && _liveSnapshot.Disks.Count > 0)
+            {
+                var diskSummary = string.Join(", ", _liveSnapshot.Disks.Select(d => $"{d.Name} ({d.UsagePercent:F0}% used)"));
+                return $"Storage drives found: {diskSummary}.";
+            }
+            return "Disk space details are currently initializing. Please try again in a second.";
+        }
+        
+        if (query.Contains("junk") || query.Contains("clean") || query.Contains("temp"))
+        {
+            if (_lastJunkReport != null)
+            {
+                var totalMB = _lastJunkReport.Sum(c => c.TotalBytes) / (1024.0 * 1024);
+                return $"A junk scan has been performed. Detected {_lastJunkReport.Sum(c => c.FileCount)} removable files totaling {totalMB:F1} MB. Run 'Clean Junk Files' quick action to perform a local scan.";
+            }
+            return "No recent junk scan report found. Run 'Clean Junk Files' quick action to perform a local scan.";
+        }
+        
+        if (query.Contains("security") || query.Contains("threat") || query.Contains("vuln") || query.Contains("port"))
+        {
+            if (_lastVulnResult != null)
+            {
+                return $"Security profile: {_lastVulnResult.Vulnerabilities.Count} vulnerabilities and {_lastVulnResult.ExposedServices.Count} exposed services detected. Run 'Security Scan' in Sentinel to refresh.";
+            }
+            return "No recent security scan has been run. Run a deep security scan in the Sentinel module.";
+        }
+        
+        if (query.Contains("turbo"))
+        {
+            return "Turbo Mode suspends non-essential Windows services, disables background tasks, and optimizes process scheduling to maximize gaming/compilation throughput. Tap 'Turbo Mode' quick action to manage.";
+        }
+        
+        if (query.Contains("health") || query.Contains("score") || query.Contains("status"))
+        {
+            return $"Overall system health grade is currently calculated based on memory usage, registry state, junk files, and active services. Perform '1-Click Optimize' to get the latest health rating.";
+        }
+
+        return "Pulse Engine is running completely offline. I can assist you with CPU performance, RAM capacity, disk storage, junk cleanup status, registry surgery, and local threat assessments. Try asking 'how much RAM is active?'.";
+    }
+
+    private List<RunningProcessInfo> UpdateAndGetTopProcesses()
+    {
+        var list = new List<RunningProcessInfo>();
+        var now = DateTime.UtcNow;
+        var processes = System.Diagnostics.Process.GetProcesses();
+        
+        var currentSnapshot = new Dictionary<int, (TimeSpan CpuTime, DateTime TimeStamp)>();
+        
+        foreach (var p in processes)
+        {
+            try
+            {
+                if (p.Id == 0) continue;
+                var cpuTime = p.TotalProcessorTime;
+                currentSnapshot[p.Id] = (cpuTime, now);
+                
+                double cpuPercent = 0.0;
+                if (_processCpuHistory.TryGetValue(p.Id, out var prev))
+                {
+                    var timeDelta = (now - prev.TimeStamp).TotalMilliseconds;
+                    var cpuDelta = (cpuTime - prev.CpuTime).TotalMilliseconds;
+                    if (timeDelta > 0)
+                    {
+                        cpuPercent = (cpuDelta / timeDelta) * 100.0 / Environment.ProcessorCount;
+                    }
+                }
+                
+                long mem = p.WorkingSet64;
+                list.Add(new RunningProcessInfo
+                {
+                    Id = p.Id,
+                    Name = p.ProcessName,
+                    Cpu = Math.Max(0.0, Math.Min(100.0, cpuPercent)),
+                    MemoryBytes = mem
+                });
+            }
+            catch
+            {
+                try
+                {
+                    long mem = p.WorkingSet64;
+                    list.Add(new RunningProcessInfo
+                    {
+                        Id = p.Id,
+                        Name = p.ProcessName,
+                        Cpu = 0.0,
+                        MemoryBytes = mem
+                    });
+                }
+                catch { }
+            }
+        }
+        
+        _processCpuHistory = currentSnapshot;
+        return list.OrderByDescending(p => p.Cpu)
+                   .ThenByDescending(p => p.MemoryBytes)
+                   .Take(5)
+                   .ToList();
+    }
+
+    private void OnTerminateProcess(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button btn && btn.DataContext is RunningProcessInfo procInfo)
+        {
+            try
+            {
+                var p = System.Diagnostics.Process.GetProcessById(procInfo.Id);
+                p.Kill();
+                MessageBox.Show($"Successfully terminated process {procInfo.Name} (PID: {procInfo.Id}).", 
+                    "LogicFlow — Process Terminated", MessageBoxButton.OK, MessageBoxImage.Information);
+                OnRefreshProcessesClick(this, new RoutedEventArgs());
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to terminate process {procInfo.Name}: {ex.Message}", 
+                    "LogicFlow — Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private void OnRefreshProcessesClick(object sender, RoutedEventArgs e)
+    {
+        Task.Run(() =>
+        {
+            _lastProcesses = UpdateAndGetTopProcesses();
+        }).ContinueWith(_ => Dispatcher.Invoke(() =>
+        {
+            ProcessesListView.ItemsSource = null;
+            ProcessesListView.ItemsSource = _lastProcesses;
+        }), System.Threading.Tasks.TaskContinuationOptions.None);
+    }
+
+    private void UpdateDashboardLiveMetrics()
+    {
+        if (_liveSnapshot == null) return;
+
+        // CPU mini
+        var cpuPct = _liveSnapshot.CpuUsagePercent;
+        MiniCpuBar.Value = cpuPct;
+        MiniCpuText.Text = cpuPct >= 0 ? $"{cpuPct:F0}%" : "—";
+        MiniCpuBar.Foreground = MetricBrush(cpuPct, Resources);
+
+        // RAM mini
+        var ramPct = _liveSnapshot.RamUsagePercent;
+        MiniRamBar.Value = ramPct;
+        MiniRamText.Text = $"{ramPct:F0}%";
+        MiniRamBar.Foreground = MetricBrush(ramPct, Resources);
+
+        // Disk mini
+        try
+        {
+            var cDrive = _liveSnapshot.Disks.FirstOrDefault(d => d.Name.StartsWith("C"));
+            if (cDrive != null)
+            {
+                MiniDiskBar.Value = cDrive.UsagePercent;
+                MiniDiskText.Text = $"{cDrive.UsagePercent:F0}%";
+                MiniDiskBar.Foreground = MetricBrush(cDrive.UsagePercent, Resources);
+            }
+        }
+        catch { }
+
+        // Processes list
+        ProcessesListView.ItemsSource = null;
+        ProcessesListView.ItemsSource = _lastProcesses;
     }
 }

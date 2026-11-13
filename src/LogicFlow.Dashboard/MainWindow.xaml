@@ -1,15 +1,16 @@
 <Window x:Class="LogicFlow.Dashboard.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="LogicFlow — AI-Powered Windows Optimization" 
     Height="800" Width="1280" MinWidth="1024" MinHeight="700"
     WindowStartupLocation="CenterScreen" WindowStyle="None"
     Icon="pack://application:,,,/Assets/AppIcon.jpg"
-    Background="{StaticResource BrandDarkBrush}" AllowsTransparency="True"
+    Background="Transparent" AllowsTransparency="False"
     FontFamily="{StaticResource AppFont}">
     
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0"/>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="-1"/>
     </WindowChrome.WindowChrome>
 
     <Grid>
@@ -97,119 +98,256 @@
             <Grid Grid.Row="1">
 
                 <!-- ──── Dashboard Page ──── -->
+                <!-- ──── Dashboard Page ──── -->
                 <ScrollViewer x:Name="PageDashboard" VerticalScrollBarVisibility="Auto" Padding="24">
                     <StackPanel Opacity="1">
                         <StackPanel.RenderTransform>
                             <TranslateTransform x:Name="DashboardTranslate" X="0" Y="0"/>
                         </StackPanel.RenderTransform>
-                        <!-- Score Cards — CLICKABLE → navigate to module -->
-                        <!-- Score Cards Row 1 -->
-                        <UniformGrid Columns="4" Margin="0,0,0,12">
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="0,0,12,0" Cursor="Hand" MouseLeftButtonDown="OnClickSecurityCard">
-                                <StackPanel>
-                                    <TextBlock Text="SECURITY SCORE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="SecurityScore" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="SecuritySub" Text="🛡 Click to scan" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0" Cursor="Hand" MouseLeftButtonDown="OnClickPerfCard">
-                                <StackPanel>
-                                    <TextBlock Text="PERFORMANCE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="PerfScore" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandCyanBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="PerfSub" Text="⚡ Click to scan" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0" Cursor="Hand" MouseLeftButtonDown="OnClickRegCard">
-                                <StackPanel>
-                                    <TextBlock Text="REGISTRY HEALTH" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="RegScore" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandPurpleBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="RegSub" Text="🔧 Click to scan" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="12,0,0,0" Cursor="Hand" MouseLeftButtonDown="OnClickRecoveryCard">
-                                <StackPanel>
-                                    <TextBlock Text="RECOVERY READY" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="RecoveryStatus" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="RecoverySub" Text="🔄 Awaiting scan" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                        </UniformGrid>
 
-                        <!-- Score Cards Row 2 — New engines -->
-                        <UniformGrid Columns="4" Margin="0,0,0,20">
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="0,0,12,0">
-                                <StackPanel>
-                                    <TextBlock Text="HEALTH SCORE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="HealthScoreLabel" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandCyanBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="HealthScoreSub" Text="🏥 Run 1-Click to calculate" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0">
-                                <StackPanel>
-                                    <TextBlock Text="DISK HEALTH" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="DiskHealthLabel" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="DiskHealthSub" Text="💾 S.M.A.R.T. status" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0">
-                                <StackPanel>
-                                    <TextBlock Text="MEMORY" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="MemoryLabel" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandPurpleBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="MemorySub" Text="🧠 RAM usage" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource ScoreCardPanel}" Margin="12,0,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="TURBO MODE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock x:Name="TurboStatusLabel" Text="OFF" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock x:Name="TurboSub" Text="🚀 Click to activate" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                </StackPanel>
-                            </Border>
-                        </UniformGrid>
-
-                        <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
-                            <StackPanel>
-                                <TextBlock Text="SYSTEM PROFILE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                        <!-- Top Mini Stats Row -->
+                        <Grid Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- CPU Usage Mini -->
+                            <Border Style="{StaticResource GlassPanel}" Padding="16,10" Margin="0,0,8,0" Grid.Column="0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="CPU" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <TextBlock x:Name="CpuLabel" Text="Loading..." FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Text="RAM" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <TextBlock x:Name="RamLabel" Text="Loading..." FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="GPU" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <TextBlock x:Name="GpuLabel" Text="Loading..." FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="3">
-                                        <TextBlock Text="OS" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <TextBlock x:Name="OsLabel" Text="Loading..." FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="CPU ACTIVE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock x:Name="MiniCpuText" Grid.Row="0" Grid.Column="1" Text="—" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrandCyanBrush}"/>
+                                    <ProgressBar x:Name="MiniCpuBar" Grid.Row="1" Grid.ColumnSpan="2" Height="4" Margin="0,6,0,0" Foreground="{StaticResource BrandCyanBrush}" Background="#15FFFFFF"/>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
+                            </Border>
 
-                        <Border Style="{StaticResource GlassPanel}">
-                            <StackPanel>
-                                <TextBlock Text="QUICK ACTIONS" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
-                                <WrapPanel>
-                                    <Button Content="🎯 1-Click Optimize" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnOneClickOptimize" Background="#00C853" FontWeight="Bold"/>
-                                    <Button Content="🛡 Full Security Scan" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnQuickSecurityScan"/>
-                                    <Button Content="⚡ Optimize Performance" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnQuickPerfScan"/>
-                                    <Button Content="🧹 Clean Junk Files" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnQuickJunkClean"/>
-                                    <Button Content="🧠 Optimize Memory" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnQuickMemoryOptimize"/>
-                                    <Button Content="🔧 Fix Registry" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnQuickRegistryScan"/>
-                                    <Button Content="🚀 Turbo Mode" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnToggleTurbo" Background="#FF6F00"/>
-                                    <Button Content="📊 Run All Scans" Style="{StaticResource ActionButton}" Margin="0,0,12,8" Click="OnRunAllScans"/>
-                                </WrapPanel>
+                            <!-- RAM Active Mini -->
+                            <Border Style="{StaticResource GlassPanel}" Padding="16,10" Margin="8,0" Grid.Column="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="RAM ACTIVE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock x:Name="MiniRamText" Grid.Row="0" Grid.Column="1" Text="—" FontSize="11" FontWeight="Bold" Foreground="{StaticResource BrandPurpleBrush}"/>
+                                    <ProgressBar x:Name="MiniRamBar" Grid.Row="1" Grid.ColumnSpan="2" Height="4" Margin="0,6,0,0" Foreground="{StaticResource BrandPurpleBrush}" Background="#15FFFFFF"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Disk Active Mini -->
+                            <Border Style="{StaticResource GlassPanel}" Padding="16,10" Margin="8,0,0,0" Grid.Column="2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="DISK USAGE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock x:Name="MiniDiskText" Grid.Row="0" Grid.Column="1" Text="—" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SuccessGreenBrush}"/>
+                                    <ProgressBar x:Name="MiniDiskBar" Grid.Row="1" Grid.ColumnSpan="2" Height="4" Margin="0,6,0,0" Foreground="{StaticResource SuccessGreenBrush}" Background="#15FFFFFF"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- 2-Column Overview Grid -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="7*"/>
+                                <ColumnDefinition Width="5*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Column 1: Health Summary + Pulse AI Agent -->
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                
+                                <!-- System Health Summary Card -->
+                                <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Circular Dial -->
+                                        <Grid Grid.Column="0" Width="140" Height="140" Margin="0,0,20,0">
+                                            <ui:ProgressRing x:Name="HealthProgressRing" Progress="85" BorderThickness="8" Foreground="{StaticResource BrandCyanBrush}" Width="130" Height="130"/>
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <TextBlock x:Name="HealthScoreLabel" Text="85%" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="Health Score" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Hardware Specs & Info -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="SYSTEM HEALTH SUMMARY" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Hardware:" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                                <TextBlock x:Name="HealthHardwareLabel" Grid.Row="0" Grid.Column="1" Text="AMD Ryzen / Loading RAM..." Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,4" TextTrimming="CharacterEllipsis"/>
+
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Operating System:" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                                <TextBlock x:Name="HealthOsLabel" Grid.Row="1" Grid.Column="1" Text="Windows 11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,4" TextTrimming="CharacterEllipsis"/>
+
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Active Monitor:" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                                <TextBlock x:Name="HealthMonitorLabel" Grid.Row="2" Grid.Column="1" Text="Guardian active, monitoring drivers" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,0,0,4"/>
+
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Status Detail:" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                                                <TextBlock x:Name="HealthScoreSub" Grid.Row="3" Grid.Column="1" Text="Grade: Excellent" Foreground="{StaticResource BrandCyanBrush}"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Pulse AI Agent Diagnostic Card -->
+                                <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,12">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="✨" FontSize="18" Foreground="{StaticResource BrandCyanBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="PULSE ON-DEVICE AI DIAGNOSTICIAN" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <Border DockPanel.Dock="Right" Background="#1500E5FF" BorderThickness="1" BorderBrush="{StaticResource BrandCyanBrush}" CornerRadius="10" Padding="8,3">
+                                                <TextBlock Text="Zero Cloud Sync · 100% Local" FontSize="9" FontWeight="Bold" Foreground="{StaticResource BrandCyanBrush}"/>
+                                            </Border>
+                                        </DockPanel>
+
+                                        <!-- Terminal Output -->
+                                        <Border Style="{StaticResource TerminalBoxStyle}" Height="200" Margin="0,0,0,12">
+                                            <ListView x:Name="AiTerminalList" Background="Transparent" BorderThickness="0" 
+                                                      ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                <ListView.ItemContainerStyle>
+                                                    <Style TargetType="ListViewItem">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Setter Property="BorderThickness" Value="0"/>
+                                                        <Setter Property="Padding" Value="0,2"/>
+                                                        <Setter Property="Focusable" Value="False"/>
+                                                    </Style>
+                                                </ListView.ItemContainerStyle>
+                                            </ListView>
+                                        </Border>
+
+                                        <!-- Input Row -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="PulseInput" Style="{StaticResource TerminalInputStyle}" 
+                                                     KeyDown="OnPulseInputKeyDown" Grid.Column="0" Margin="0,0,8,0"
+                                                     VerticalContentAlignment="Center" Padding="12,8"/>
+                                            <Button x:Name="BtnPulseAsk" Content="Ask Agent" Style="{StaticResource ActionButton}" Click="OnPulseAskClick" Grid.Column="1" Padding="20,10"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-                        </Border>
+
+                            <!-- Column 2: Quick Actions + High-Impact Processes -->
+                            <StackPanel Grid.Column="1">
+                                
+                                <!-- Quick Actions Card -->
+                                <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                                    <StackPanel>
+                                        <TextBlock Text="QUICK ACTIONS" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                        <UniformGrid Columns="2">
+                                            <Button Content="🎯 1-Click Optimize" Style="{StaticResource ActionButton}" Margin="0,0,6,8" Click="OnOneClickOptimize" Background="#00C853" FontWeight="Bold"/>
+                                            <Button Content="🛡 Security Scan" Style="{StaticResource ActionButton}" Margin="6,0,0,8" Click="OnQuickSecurityScan"/>
+                                            <Button Content="⚡ Performance Scan" Style="{StaticResource ActionButton}" Margin="0,0,6,8" Click="OnQuickPerfScan"/>
+                                            <Button Content="🧹 Clean Junk Files" Style="{StaticResource ActionButton}" Margin="6,0,0,8" Click="OnQuickJunkClean"/>
+                                            <Button Content="🧠 Optimize RAM" Style="{StaticResource ActionButton}" Margin="0,0,6,8" Click="OnQuickMemoryOptimize"/>
+                                            <Button Content="🔧 Fix Registry" Style="{StaticResource ActionButton}" Margin="6,0,0,8" Click="OnQuickRegistryScan"/>
+                                            <Button Content="🚀 Turbo Mode" Style="{StaticResource ActionButton}" Margin="0,0,6,0" Click="OnToggleTurbo" Background="#FF6F00"/>
+                                            <Button Content="📊 Run All Scans" Style="{StaticResource ActionButton}" Margin="6,0,0,0" Click="OnRunAllScans"/>
+                                        </UniformGrid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- High-Impact Running Processes Card -->
+                                <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,12">
+                                            <TextBlock Text="HIGH-IMPACT RUNNING PROCESSES" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                            <Button Content="🔄 Refresh" Style="{StaticResource OutlineButton}" Padding="10,5" FontSize="11" Click="OnRefreshProcessesClick" DockPanel.Dock="Right" VerticalAlignment="Center"/>
+                                        </DockPanel>
+
+                                        <!-- Processes Table (ListView with GridView) -->
+                                        <ListView x:Name="ProcessesListView" Background="Transparent" BorderThickness="0" MaxHeight="250"
+                                                  ItemContainerStyle="{StaticResource DashboardTableRowStyle}">
+                                            <ListView.View>
+                                                <GridView>
+                                                    <GridViewColumn Header="Process Name" Width="140">
+                                                        <GridViewColumn.HeaderContainerStyle>
+                                                            <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
+                                                        </GridViewColumn.HeaderContainerStyle>
+                                                        <GridViewColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                                            </DataTemplate>
+                                                        </GridViewColumn.CellTemplate>
+                                                    </GridViewColumn>
+                                                    <GridViewColumn Header="CPU %" Width="70">
+                                                        <GridViewColumn.HeaderContainerStyle>
+                                                            <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
+                                                        </GridViewColumn.HeaderContainerStyle>
+                                                        <GridViewColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding CpuFormatted}" Foreground="{StaticResource BrandCyanBrush}" HorizontalAlignment="Right"/>
+                                                            </DataTemplate>
+                                                        </GridViewColumn.CellTemplate>
+                                                    </GridViewColumn>
+                                                    <GridViewColumn Header="RAM" Width="85">
+                                                        <GridViewColumn.HeaderContainerStyle>
+                                                            <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
+                                                        </GridViewColumn.HeaderContainerStyle>
+                                                        <GridViewColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding MemoryFormatted}" Foreground="{StaticResource BrandPurpleBrush}" HorizontalAlignment="Right"/>
+                                                            </DataTemplate>
+                                                        </GridViewColumn.CellTemplate>
+                                                    </GridViewColumn>
+                                                    <GridViewColumn Header="Action" Width="75">
+                                                        <GridViewColumn.HeaderContainerStyle>
+                                                            <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource DashboardTableHeaderStyle}"/>
+                                                        </GridViewColumn.HeaderContainerStyle>
+                                                        <GridViewColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <Button Content="Kill" Click="OnTerminateProcess" 
+                                                                        Background="#33EF4444" Foreground="{StaticResource DangerRedBrush}" BorderBrush="{StaticResource DangerRedBrush}" BorderThickness="1"
+                                                                        FontSize="10" Padding="6,2" Cursor="Hand"/>
+                                                            </DataTemplate>
+                                                        </GridViewColumn.CellTemplate>
+                                                    </GridViewColumn>
+                                                </GridView>
+                                            </ListView.View>
+                                        </ListView>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
 

@@ -1,3 +1,4 @@
+#pragma warning disable CA1416
 // OmniLicense — RSA License Validator & HWID Manager
 // Proprietary implementation by DelgadoLogic.Tech
 

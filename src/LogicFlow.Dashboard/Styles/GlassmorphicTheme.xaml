@@ -1,0 +1,560 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework">
+
+    <!-- ==========================================================================
+       TYPOGRAPHY
+       ========================================================================== -->
+    <!-- Mapped to 'Inter' (Body / Buttons) and 'Outfit' (Headings) -->
+    <FontFamily x:Key="FontInter">pack://application:,,,/Assets/Fonts/#Inter, Segoe UI, Arial, sans-serif</FontFamily>
+    <FontFamily x:Key="FontOutfit">pack://application:,,,/Assets/Fonts/#Outfit, Segoe UI Semibold, Arial, sans-serif</FontFamily>
+    <FontFamily x:Key="FontMono">Consolas, JetBrains Mono, Courier New, monospace</FontFamily>
+
+    <!-- ==========================================================================
+       DEFAULT COLOR PALETTE (Deep Midnight / Neon Teal / Accent Violet)
+       ========================================================================== -->
+    <!-- Base Colors -->
+    <Color x:Key="ColorBgBase">#FF0A0C10</Color>              <!-- hsl(220, 25%, 5%) -->
+    <Color x:Key="ColorBgSidebar">#A60F1319</Color>           <!-- hsla(220, 25%, 8%, 0.65) -->
+    <Color x:Key="ColorBgCard">#73131720</Color>              <!-- hsla(220, 25%, 10%, 0.45) -->
+    <Color x:Key="ColorBgCardHover">#8C1B212D</Color>         <!-- hsla(220, 25%, 14%, 0.55) -->
+    <Color x:Key="ColorBgTerminal">#D907090E</Color>          <!-- hsla(220, 35%, 4%, 0.85) -->
+
+    <!-- Accents & Glows -->
+    <Color x:Key="ColorAccent">#FF00FFFF</Color>              <!-- hsl(180, 100%, 50%) - Neon Teal -->
+    <Color x:Key="ColorAccentGlow">#2600FFFF</Color>          <!-- hsla(180, 100%, 50%, 0.15) -->
+    <Color x:Key="ColorAccentBorder">#4000FFFF</Color>        <!-- hsla(180, 100%, 50%, 0.25) -->
+    <Color x:Key="ColorHighlight">#FFA980FF</Color>           <!-- hsl(260, 100%, 75%) - Accent Violet -->
+
+    <!-- Borders -->
+    <Color x:Key="ColorBorder">#14FFFFFF</Color>              <!-- rgba(255, 255, 255, 0.08) -->
+    <Color x:Key="ColorBorderHover">#29FFFFFF</Color>         <!-- rgba(255, 255, 255, 0.16) -->
+
+    <!-- Text -->
+    <Color x:Key="ColorTextMain">#FFECF0F4</Color>            <!-- hsl(210, 25%, 94%) -->
+    <Color x:Key="ColorTextMuted">#FF919CAC</Color>           <!-- hsl(215, 14%, 62%) -->
+    <Color x:Key="ColorTextInverse">#FF0E121B</Color>         <!-- hsl(220, 30%, 8%) -->
+
+    <!-- Status Colors -->
+    <Color x:Key="ColorSuccess">#FF18DC6A</Color>             <!-- hsl(145, 80%, 48%) -->
+    <Color x:Key="ColorSuccessGlow">#2618DC6A</Color>         <!-- hsla(145, 80%, 48%, 0.15) -->
+    <Color x:Key="ColorDanger">#FFFF3344</Color>              <!-- hsl(355, 100%, 60%) -->
+    <Color x:Key="ColorDangerGlow">#26FF3344</Color>          <!-- hsla(355, 100%, 60%, 0.15) -->
+    <Color x:Key="ColorWarning">#FFFFAB1A</Color>             <!-- hsl(38, 100%, 55%) -->
+    <Color x:Key="ColorWarningGlow">#26FFAB1A</Color>         <!-- hsla(38, 100%, 55%, 0.15) -->
+    <Color x:Key="ColorInfo">#FF1AB3FF</Color>                <!-- hsl(200, 100%, 55%) -->
+
+    <!-- ==========================================================================
+       BRUSHES (DEFAULT THEME)
+       ========================================================================== -->
+    <SolidColorBrush x:Key="BrushBgBase" Color="{StaticResource ColorBgBase}"/>
+    <SolidColorBrush x:Key="BrushBgSidebar" Color="{StaticResource ColorBgSidebar}"/>
+    <SolidColorBrush x:Key="BrushBgCard" Color="{StaticResource ColorBgCard}"/>
+    <SolidColorBrush x:Key="BrushBgCardHover" Color="{StaticResource ColorBgCardHover}"/>
+    <SolidColorBrush x:Key="BrushBgTerminal" Color="{StaticResource ColorBgTerminal}"/>
+
+    <SolidColorBrush x:Key="BrushAccent" Color="{StaticResource ColorAccent}"/>
+    <SolidColorBrush x:Key="BrushAccentGlow" Color="{StaticResource ColorAccentGlow}"/>
+    <SolidColorBrush x:Key="BrushAccentBorder" Color="{StaticResource ColorAccentBorder}"/>
+    <SolidColorBrush x:Key="BrushHighlight" Color="{StaticResource ColorHighlight}"/>
+
+    <SolidColorBrush x:Key="BrushBorder" Color="{StaticResource ColorBorder}"/>
+    <SolidColorBrush x:Key="BrushBorderHover" Color="{StaticResource ColorBorderHover}"/>
+
+    <SolidColorBrush x:Key="BrushTextMain" Color="{StaticResource ColorTextMain}"/>
+    <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextMuted}"/>
+    <SolidColorBrush x:Key="BrushTextInverse" Color="{StaticResource ColorTextInverse}"/>
+
+    <SolidColorBrush x:Key="BrushSuccess" Color="{StaticResource ColorSuccess}"/>
+    <SolidColorBrush x:Key="BrushSuccessGlow" Color="{StaticResource ColorSuccessGlow}"/>
+    <SolidColorBrush x:Key="BrushDanger" Color="{StaticResource ColorDanger}"/>
+    <SolidColorBrush x:Key="BrushDangerGlow" Color="{StaticResource ColorDangerGlow}"/>
+    <SolidColorBrush x:Key="BrushWarning" Color="{StaticResource ColorWarning}"/>
+    <SolidColorBrush x:Key="BrushWarningGlow" Color="{StaticResource ColorWarningGlow}"/>
+    <SolidColorBrush x:Key="BrushInfo" Color="{StaticResource ColorInfo}"/>
+
+    <!-- Gradients -->
+    <!-- logo-icon: linear-gradient(135deg, var(accent), var(highlight)) -->
+    <LinearGradientBrush x:Key="BrushLogoGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource ColorAccent}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource ColorHighlight}" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- progress-bar-inner: linear-gradient(90deg, var(accent), var(highlight)) -->
+    <LinearGradientBrush x:Key="BrushProgressGradient" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="{StaticResource ColorAccent}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource ColorHighlight}" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- Window Background Mesh: radial-gradients overlay simulations -->
+    <RadialGradientBrush x:Key="BrushBackgroundMesh" Center="0.1,0.2" RadiusX="0.45" RadiusY="0.45">
+        <GradientStop Color="#0A00FFFF" Offset="0.0"/>
+        <GradientStop Color="Transparent" Offset="1.0"/>
+    </RadialGradientBrush>
+
+    <!-- ==========================================================================
+       SHADOW EFFECTS
+       ========================================================================== -->
+    <!-- shadow-main: 0 8px 32px 0 rgba(0, 0, 0, 0.4) -->
+    <DropShadowEffect x:Key="ShadowMain" BlurRadius="32" ShadowDepth="8" Direction="270" Color="Black" Opacity="0.4"/>
+
+    <!-- shadow-accent: 0 0 24px 0 hsla(var(accent-hue), var(accent-sat), var(accent-light), 0.18) -->
+    <DropShadowEffect x:Key="ShadowAccent" BlurRadius="24" ShadowDepth="0" Color="{StaticResource ColorAccent}" Opacity="0.18"/>
+
+    <!-- shadow-card-hover: combined simulation -->
+    <DropShadowEffect x:Key="ShadowCardHover" BlurRadius="40" ShadowDepth="12" Direction="270" Color="Black" Opacity="0.55"/>
+
+    <!-- Primary Button Glow -->
+    <DropShadowEffect x:Key="ShadowButtonPrimary" BlurRadius="16" ShadowDepth="4" Direction="270" Color="{StaticResource ColorAccent}" Opacity="0.30"/>
+    
+    <!-- Primary Button Glow (Hover) -->
+    <DropShadowEffect x:Key="ShadowButtonPrimaryHover" BlurRadius="20" ShadowDepth="6" Direction="270" Color="{StaticResource ColorAccent}" Opacity="0.40"/>
+
+    <!-- Danger Button Glow -->
+    <DropShadowEffect x:Key="ShadowButtonDanger" BlurRadius="16" ShadowDepth="4" Direction="270" Color="{StaticResource ColorDanger}" Opacity="0.15"/>
+
+    <!-- Success Button Glow -->
+    <DropShadowEffect x:Key="ShadowButtonSuccess" BlurRadius="16" ShadowDepth="4" Direction="270" Color="{StaticResource ColorSuccess}" Opacity="0.15"/>
+
+    <!-- ==========================================================================
+       CONTROL STYLES: TYPOGRAPHY
+       ========================================================================== -->
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="ClearType"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="Auto"/>
+    </Style>
+
+    <Style x:Key="HeadingStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontOutfit}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="ClearType"/>
+    </Style>
+
+    <Style x:Key="MutedTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+    </Style>
+
+    <Style x:Key="MonoTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+    </Style>
+
+    <!-- ==========================================================================
+       CONTROL STYLES: CARDS (GLASSMORPHIC)
+       ========================================================================== -->
+    <!-- .glass-card -->
+    <Style x:Key="GlassCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BrushBgCard}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="20"/>
+        <Setter Property="Padding" Value="24,20"/>
+        <Setter Property="Effect" Value="{StaticResource ShadowMain}"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <!-- Smooth state change utilizing Storyboards for professional feel -->
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBgCardHover}" Duration="0:0:0.2"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBorderHover}" Duration="0:0:0.2"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBgCard}" Duration="0:0:0.2"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBorder}" Duration="0:0:0.2"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- .glass-card.highlight-glow -->
+    <Style x:Key="GlassCardHighlightStyle" TargetType="Border" BasedOn="{StaticResource GlassCardStyle}">
+        <!-- Combined effect of ShadowMain (depth shadow) and ShadowAccent (neon glow) -->
+        <Setter Property="Effect" Value="{StaticResource ShadowAccent}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBgCardHover}" Duration="0:0:0.2"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBorderHover}" Duration="0:0:0.2"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.BlurRadius)"
+                                             To="40" Duration="0:0:0.2"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)"
+                                             To="0.55" Duration="0:0:0.2"/>
+                            <!-- Shift color from Accent Glow to Accent Border or Dark Shadow -->
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Color)"
+                                            To="Black" Duration="0:0:0.2"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBgCard}" Duration="0:0:0.2"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBorder}" Duration="0:0:0.2"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.BlurRadius)"
+                                             To="24" Duration="0:0:0.2"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Opacity)"
+                                             To="0.18" Duration="0:0:0.2"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.Color)"
+                                            To="{StaticResource ColorAccent}" Duration="0:0:0.2"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ==========================================================================
+       CONTROL STYLES: BUTTONS
+       ========================================================================== -->
+    <!-- Base Button Styling -->
+    <Style x:Key="BaseButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="10">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- .btn-primary -->
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+        <Setter Property="Background" Value="{StaticResource BrushAccent}"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextInverse}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Effect" Value="{StaticResource ShadowButtonPrimary}"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <TranslateTransform Y="0"/>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.9" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(TranslateTransform.Y)" To="-1" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.BlurRadius)" To="20" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.Opacity)" To="0.4" Duration="0:0:0.15"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1.0" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Button.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.BlurRadius)" To="16" Duration="0:0:0.15"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(Button.Effect).(DropShadowEffect.Opacity)" To="0.3" Duration="0:0:0.15"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <TranslateTransform Y="0"/>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- .btn-secondary -->
+    <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+        <!-- Transparent background with border -->
+        <Setter Property="Background" Value="#08FFFFFF"/>               <!-- rgba(255, 255, 255, 0.03) -->
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
+                                            To="#0FFFFFFF" Duration="0:0:0.15"/> <!-- rgba(255,255,255,0.06) -->
+                            <ColorAnimation Storyboard.TargetProperty="(Button.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBorderHover}" Duration="0:0:0.15"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
+                                            To="#08FFFFFF" Duration="0:0:0.15"/>
+                            <ColorAnimation Storyboard.TargetProperty="(Button.BorderBrush).(SolidColorBrush.Color)"
+                                            To="{StaticResource ColorBorder}" Duration="0:0:0.15"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- .btn-danger -->
+    <Style x:Key="DangerButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+        <Setter Property="Background" Value="{StaticResource BrushDanger}"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Effect" Value="{StaticResource ShadowButtonDanger}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Opacity" Value="0.95"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect BlurRadius="20" ShadowDepth="6" Direction="270" Color="{StaticResource ColorDanger}" Opacity="0.30"/>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- .btn-success -->
+    <Style x:Key="SuccessButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+        <Setter Property="Background" Value="{StaticResource BrushSuccess}"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextInverse}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Effect" Value="{StaticResource ShadowButtonSuccess}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Opacity" Value="0.95"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect BlurRadius="20" ShadowDepth="6" Direction="270" Color="{StaticResource ColorSuccess}" Opacity="0.30"/>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ==========================================================================
+       SIDEBAR NAVIGATION SYSTEM
+       ========================================================================== -->
+    <!-- Represents the styling for navigation items (.nav-btn) -->
+    <!-- Usually implemented as RadioButtons to maintain selection state -->
+    <Style x:Key="SidebarNavButtonStyle" TargetType="RadioButton">
+        <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Height" Value="45"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid>
+                        <!-- Main background container -->
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <!-- Left vertical active line indicator -->
+                            <Grid>
+                                <Border x:Name="activeIndicator"
+                                        Width="3"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Height="22"
+                                        Background="{StaticResource BrushAccent}"
+                                        CornerRadius="0,4,4,0"
+                                        Margin="-16,0,0,0"
+                                        Visibility="Collapsed">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{StaticResource ColorAccent}" Opacity="0.8"/>
+                                    </Border.Effect>
+                                </Border>
+                                
+                                <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- Hover State -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+                            <Setter TargetName="border" Property="Background" Value="#05FFFFFF"/> <!-- rgba(255,255,255,0.02) -->
+                            <Setter TargetName="border" Property="BorderBrush" Value="#0AFFFFFF"/> <!-- rgba(255,255,255,0.04) -->
+                        </MultiTrigger>
+                        <!-- Checked / Active State -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource BrushAccentGlow}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BrushAccentBorder}"/>
+                            <Setter TargetName="activeIndicator" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==========================================================================
+       PULSE AI TERMINAL & LOG CONSOLES
+       ========================================================================== -->
+    <!-- .ai-terminal / .log-console-box -->
+    <Style x:Key="TerminalBoxStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BrushBgTerminal}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="16"/>
+        <!-- Simulates the inset shadow using a soft DropShadow with negative depth and low opacity -->
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="-2" Direction="90" Color="Black" Opacity="0.35"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Console Input box -->
+    <!-- .ai-input-row input -->
+    <Style x:Key="TerminalInputStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="#33000000"/>                 <!-- rgba(0,0,0,0.2) -->
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="false"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BrushHighlight}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==========================================================================
+       DASHBOARD TABLES
+       ========================================================================== -->
+    <Style x:Key="DashboardTableHeaderStyle" TargetType="GridViewColumnHeader">
+        <Setter Property="Background" Value="#05FFFFFF"/>             <!-- rgba(255,255,255,0.02) -->
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontInter}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="10.5"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+
+    <Style x:Key="DashboardTableRowStyle" TargetType="ListViewItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextMain}"/>
+        <Setter Property="BorderBrush" Value="#05FFFFFF"/>              <!-- rgba(255,255,255,0.02) -->
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#04FFFFFF"/>       <!-- rgba(255,255,255,0.015) -->
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="#0A00FFFF"/>       <!-- hsla(var(accent-hue), var(accent-sat), var(accent-light), 0.04) -->
+                <Setter Property="BorderBrush" Value="{StaticResource BrushAccent}"/>
+                <!-- Give active selectable row a slightly left-accented border highlight -->
+                <Setter Property="BorderThickness" Value="2,0,0,1"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ==========================================================================
+       JUNK CLEANER SCANS
+       ========================================================================== -->
+    <!-- .progress-bar-outer / .progress-bar-inner -->
+    <Style x:Key="GlassProgressBarStyle" TargetType="ProgressBar">
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="Background" Value="#0DFFFFFF"/>              <!-- rgba(255, 255, 255, 0.05) -->
+        <Setter Property="Foreground" Value="{StaticResource BrushProgressGradient}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid>
+                        <Border x:Name="PART_Track"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"/>
+                        <Border x:Name="PART_Indicator"
+                                Background="{TemplateBinding Foreground}"
+                                CornerRadius="4"
+                                HorizontalAlignment="Left"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
