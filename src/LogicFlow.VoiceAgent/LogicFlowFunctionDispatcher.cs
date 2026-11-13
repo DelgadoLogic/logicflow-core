@@ -15,7 +15,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using LogicFlow.Guardian;
-using LogicFlow.Core;
+using OmniCore.Engine;
 
 namespace LogicFlow.VoiceAgent;
 

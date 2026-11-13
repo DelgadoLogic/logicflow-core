@@ -1,10 +1,10 @@
-// LogicFlow.Licensing — Unit Tests
+// OmniLicense — Unit Tests
 // Tests RSA license validation, HWID generation, trial management, and tier configurations.
 
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using LogicFlow.Licensing;
+using OmniLicense;
 using Microsoft.Extensions.Logging;
 using Moq;
 

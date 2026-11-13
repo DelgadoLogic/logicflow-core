@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // DelgadoLogic.Core — Shared Update Engine
-// Extracted from LogicFlow.Core.AutoUpdateEngine — superset implementation
+// Extracted from OmniCore.Engine.AutoUpdateEngine — superset implementation
 // that works identically for LogicFlow AND Aeon Browser.
 //
 // ARCHITECTURE: Mirrors Microsoft's Click-to-Run shared update infrastructure
@@ -14,6 +14,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Crypto.Signers;
+using Org.BouncyCastle.Crypto.Parameters;
 
 namespace DelgadoLogic.Core;
 
@@ -37,9 +39,8 @@ public sealed class SharedUpdateEngine : IAsyncDisposable
     // Ed25519 public key — embedded, never changes without a new binary release.
     // The corresponding private key lives ONLY in GCP Secret Manager.
     // This is the same key used by AutoUpdater.cpp in Aeon Browser native.
-    private static readonly byte[] SovereignPublicKey = Convert.FromBase64String(
-        "MCowBQYDK2VwAyEA" +  // Ed25519 SubjectPublicKeyInfo prefix
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="); // REPLACE with real key at key ceremony
+    private static byte[] SovereignPublicKey = Convert.FromBase64String(
+        "BfoHnS014mgux9fNHwe0zzRPEqVoy0OOJ+5tVvfu3a4=");
 
     private readonly ILogger _logger;
     private readonly ProductManifest _manifest;
@@ -162,13 +163,12 @@ public sealed class SharedUpdateEngine : IAsyncDisposable
             var payloadBytes = Encoding.UTF8.GetBytes(payload);
             var sigBytes     = Convert.FromBase64String(manifest.Signature);
 
-            using var ed = ECDsa.Create();
-            // NOTE: Ed25519 is not natively in .NET ECDsa for all target frameworks.
-            // For now, validate using SHA-256 HMAC as placeholder until
-            // NSec / BouncyCastle Ed25519 package is added.
-            // TODO: Replace with actual Ed25519 once NSec is added to csproj.
-            // Ref: https://nsec.rocks/docs/api/nsec.cryptography.signaturealgorithm
-            return true; // PLACEHOLDER — replace with real Ed25519 verify
+            var verifier = new Ed25519Signer();
+            var publicKeyParam = new Ed25519PublicKeyParameters(SovereignPublicKey, 0);
+            verifier.Init(false, publicKeyParam);
+            verifier.BlockUpdate(payloadBytes, 0, payloadBytes.Length);
+
+            return verifier.VerifySignature(sigBytes);
         }
         catch
         {

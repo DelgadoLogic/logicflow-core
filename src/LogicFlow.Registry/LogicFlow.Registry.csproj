@@ -11,6 +11,6 @@
     <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LogicFlow.Core\LogicFlow.Core.csproj" />
+    <ProjectReference Include="..\OmniCore.Engine\OmniCore.Engine.csproj" />
   </ItemGroup>
 </Project>

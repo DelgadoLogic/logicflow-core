@@ -21,16 +21,16 @@
     <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LogicFlow.Core\LogicFlow.Core.csproj" />
+    <ProjectReference Include="..\OmniCore.Engine\OmniCore.Engine.csproj" />
     <ProjectReference Include="..\LogicFlow.Scraper\LogicFlow.Scraper.csproj" />
     <ProjectReference Include="..\LogicFlow.Sentinel\LogicFlow.Sentinel.csproj" />
     <ProjectReference Include="..\LogicFlow.Guardian\LogicFlow.Guardian.csproj" />
     <ProjectReference Include="..\LogicFlow.Lazarus\LogicFlow.Lazarus.csproj" />
     <ProjectReference Include="..\LogicFlow.Registry\LogicFlow.Registry.csproj" />
-    <ProjectReference Include="..\LogicFlow.Licensing\LogicFlow.Licensing.csproj" />
-    <ProjectReference Include="..\LogicFlow.Commerce\LogicFlow.Commerce.csproj" />
+    <ProjectReference Include="..\OmniLicense\OmniLicense.csproj" />
+    <ProjectReference Include="..\OmniLicense.Commerce\OmniLicense.Commerce.csproj" />
     <ProjectReference Include="..\LogicFlow.Native\LogicFlow.Native.csproj" />
-    <ProjectReference Include="..\LogicFlow.Pulse\LogicFlow.Pulse.csproj" />
+    <ProjectReference Include="..\OmniPulse\OmniPulse.csproj" />
     <!-- DelgadoLogic Shared Runtime — licensing, identity, telemetry, sovereign updates -->
     <ProjectReference Include="..\DelgadoLogic.Core\DelgadoLogic.Core.csproj" />
   </ItemGroup>

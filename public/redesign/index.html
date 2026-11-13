@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LogicFlow Dashboard — Visual Redesign Prototype</title>
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- CSS Link -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <div class="app-container">
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 10V3L4 14H11V21L20 10H13Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Logic<span>Flow</span></h1>
+          <span class="brand-sub">PC Intelligence Platform</span>
+        </div>
+      </div>
+      
+      <!-- Privacy Badge -->
+      <div class="privacy-badge">
+        <div class="pulse-dot green"></div>
+        <div class="badge-content">
+          <span class="badge-title">Local-First Privacy</span>
+          <span class="badge-desc">Zero Cloud Sync · 100% Local</span>
+        </div>
+      </div>
+      
+      <!-- NAVIGATION -->
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <button class="nav-btn active" data-target="overview">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+              <span>Overview</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-target="junk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+              <span>Junk Cleaner</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-target="turbo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              <span>Turbo Mode</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-target="network">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 6v6l4 2"/></svg>
+              <span>Network Scanner</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-target="registry">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              <span>Registry Surgeon</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-btn" data-target="lazarus">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span>Lazarus Recovery</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+      
+      <!-- Sidebar Footer Info -->
+      <div class="sidebar-footer">
+        <div class="pulse-engine-status">
+          <span class="status-label">Local AI Engine (Pulse)</span>
+          <span class="status-value font-mono">Gemma 3 Active</span>
+        </div>
+        <div class="footer-attribution">
+          <p>© 2026 DelgadoLogic Systems LLC</p>
+          <p>Built by Manuel Alejandro Delgado</p>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      
+      <!-- TOP STATUS HEADER BAR -->
+      <header class="content-header">
+        <div class="header-title-area">
+          <h2 id="current-tab-title">Overview</h2>
+          <p id="current-tab-desc">Dynamic system diagnostics and local AI insights.</p>
+        </div>
+        
+        <div class="system-mini-stats">
+          <div class="mini-stat-card">
+            <span class="stat-label">CPU Usage</span>
+            <div class="stat-metric-row">
+              <span class="stat-value font-mono" id="stat-cpu">12%</span>
+              <div class="mini-bar"><div class="mini-fill" id="fill-cpu" style="width: 12%"></div></div>
+            </div>
+          </div>
+          <div class="mini-stat-card">
+            <span class="stat-label">RAM Active</span>
+            <div class="stat-metric-row">
+              <span class="stat-value font-mono" id="stat-ram">44%</span>
+              <div class="mini-bar"><div class="mini-fill" id="fill-ram" style="width: 44%"></div></div>
+            </div>
+          </div>
+          <div class="mini-stat-card">
+            <span class="stat-label">Sys Temp</span>
+            <div class="stat-metric-row">
+              <span class="stat-value font-mono" id="stat-temp">48°C</span>
+              <div class="mini-bar"><div class="mini-fill" id="fill-temp" style="width: 48%"></div></div>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <!-- TAB CONTENTS -->
+      <div class="tab-viewport">
+        
+        <!-- OVERVIEW TAB -->
+        <section class="tab-pane active" id="pane-overview">
+          <div class="grid-layout cols-3">
+            
+            <!-- System Health Overview Card -->
+            <div class="glass-card span-2 highlight-glow">
+              <div class="card-header">
+                <h3>System Health Summary</h3>
+                <span class="badge badge-success font-mono">Status: Stable</span>
+              </div>
+              <div class="card-body">
+                <div class="health-overview-metrics">
+                  <div class="health-ring-container">
+                    <div class="radial-progress-ring">
+                      <svg viewBox="0 0 100 100">
+                        <circle class="ring-bg" cx="50" cy="50" r="42" stroke-width="8"></circle>
+                        <circle class="ring-fill" cx="50" cy="50" r="42" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="40" id="health-ring"></circle>
+                      </svg>
+                      <div class="ring-text">
+                        <span class="ring-pct font-mono" id="health-percentage">85%</span>
+                        <span class="ring-label">Health Score</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="health-details-list">
+                    <div class="health-detail-item">
+                      <span class="detail-label">Hardware Specifications</span>
+                      <span class="detail-value font-mono">AMD Ryzen 9 5900X 12-Core | 32 GB DDR4 RAM | NVIDIA RTX 4070 Ti</span>
+                    </div>
+                    <div class="health-detail-item">
+                      <span class="detail-label">Operating System</span>
+                      <span class="detail-value font-mono">Windows 11 Professional (Build 22631.3527)</span>
+                    </div>
+                    <div class="health-detail-item">
+                      <span class="detail-label">Local Host Environment</span>
+                      <span class="detail-value font-mono">Hostname: DELGADOLOGIC-PC | Local Gateway: 192.168.1.1</span>
+                    </div>
+                    <div class="health-detail-item">
+                      <span class="detail-label">Active Threat Monitor</span>
+                      <span class="detail-value font-mono text-success">Guardian Active (0 Anomalies Detected)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Quick Actions Panel -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>Quick Actions</h3>
+              </div>
+              <div class="card-body vertical-buttons">
+                <button class="btn btn-primary btn-action" id="action-quick-scan">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  Run Diagnostics
+                </button>
+                <button class="btn btn-secondary btn-action" id="action-optimize-ram">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                  Optimize RAM (Local)
+                </button>
+                <button class="btn btn-secondary btn-action" id="action-rebuild-lazarus">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  Verify Lazarus Blocks
+                </button>
+              </div>
+            </div>
+            
+            <!-- Pulse AI Agent Diagnostic Card -->
+            <div class="glass-card span-2 pulse-ai-card">
+              <div class="card-header">
+                <div class="ai-title-group">
+                  <div class="ai-sparkle">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>
+                  </div>
+                  <h3>Pulse On-Device AI Diagnostician</h3>
+                </div>
+                <span class="badge badge-pulse">Local-Only Execution</span>
+              </div>
+              <div class="card-body">
+                <div class="ai-terminal">
+                  <div class="ai-response-message" id="pulse-diagnostic-box">
+                    <span class="terminal-prompt">&gt; Initializing Pulse Engine v3.1... Ready.</span>
+                    <p class="ai-paragraph"><strong>PULSE ANALYSIS:</strong> System health is solid at 85%. There are 4.90 GB of removable temporary files. Port 3389 is open (RDP Listening) which represents a security risk if port forwarding is enabled on your router. 4 non-essential background processes can be suspended in Turbo Mode to decrease thread count by 24 and recover 1.2 GB of RAM.</p>
+                  </div>
+                </div>
+                <div class="ai-input-row">
+                  <input type="text" id="pulse-input" placeholder="Ask Pulse about your system (e.g. 'How can I lower latency?')..." disabled>
+                  <button class="btn btn-pulse" id="btn-pulse-ask" disabled>Query</button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Running Processes (Zero Placeholders) -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>High-Impact Processes</h3>
+                <span class="header-subtitle font-mono">Top 5 Resource Consumers</span>
+              </div>
+              <div class="card-body no-padding">
+                <table class="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Process</th>
+                      <th>PID</th>
+                      <th>RAM</th>
+                      <th>CPU</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="process-indicator green"></span><strong>chrome.exe</strong></td>
+                      <td class="font-mono">14240</td>
+                      <td class="font-mono">1,124 MB</td>
+                      <td class="font-mono text-warning">4.2%</td>
+                    </tr>
+                    <tr>
+                      <td><span class="process-indicator green"></span><strong>discord.exe</strong></td>
+                      <td class="font-mono">8956</td>
+                      <td class="font-mono">412 MB</td>
+                      <td class="font-mono">1.1%</td>
+                    </tr>
+                    <tr>
+                      <td><span class="process-indicator green"></span><strong>explorer.exe</strong></td>
+                      <td class="font-mono">4912</td>
+                      <td class="font-mono">288 MB</td>
+                      <td class="font-mono">0.8%</td>
+                    </tr>
+                    <tr>
+                      <td><span class="process-indicator green"></span><strong>steam.exe</strong></td>
+                      <td class="font-mono">10532</td>
+                      <td class="font-mono">180 MB</td>
+                      <td class="font-mono">0.2%</td>
+                    </tr>
+                    <tr>
+                      <td><span class="process-indicator green"></span><strong>spotify.exe</strong></td>
+                      <td class="font-mono">12040</td>
+                      <td class="font-mono">164 MB</td>
+                      <td class="font-mono">0.4%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+        <!-- JUNK CLEANER TAB -->
+        <section class="tab-pane" id="pane-junk">
+          <div class="grid-layout cols-3">
+            
+            <!-- Main Scan Control -->
+            <div class="glass-card span-3">
+              <div class="card-header">
+                <h3>Junk File Engine</h3>
+                <p class="header-desc">Safely scan and purge system garbage. Thread-safe lock checking prevents file-in-use crash spikes.</p>
+              </div>
+              <div class="card-body">
+                <div class="scan-control-panel">
+                  <div class="scan-button-group">
+                    <button class="btn btn-primary btn-large" id="btn-junk-scan">
+                      <svg class="icon spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                      <span id="junk-btn-text">Scan Junk Files</span>
+                    </button>
+                    <button class="btn btn-danger btn-large hidden" id="btn-junk-clear">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                      Purge Selected Files
+                    </button>
+                  </div>
+                  
+                  <!-- Scan Progress Overlay -->
+                  <div class="scan-progress-area hidden" id="junk-progress-container">
+                    <div class="progress-bar-outer">
+                      <div class="progress-bar-inner" id="junk-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-status-row">
+                      <span class="progress-status-text" id="junk-status-text">Ready to scan...</span>
+                      <span class="progress-percentage font-mono" id="junk-progress-pct">0%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Category Cards (Shown post-scan, initially placeholders or empty) -->
+            <div class="glass-card span-2">
+              <div class="card-header">
+                <h3>Junk File Details</h3>
+                <span class="header-subtitle" id="junk-summary-count">Run a scan to search for temporary and cached data.</span>
+              </div>
+              <div class="card-body no-padding">
+                <div class="empty-state" id="junk-details-empty">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <p>Click "Scan Junk Files" to begin analyzing system directories</p>
+                </div>
+                
+                <div class="junk-list hidden" id="junk-details-list">
+                  <div class="junk-item">
+                    <div class="junk-item-meta">
+                      <input type="checkbox" checked id="chk-win-temp">
+                      <div class="junk-text-block">
+                        <span class="junk-name">Windows Temporary Files</span>
+                        <span class="junk-path font-mono">C:\Windows\Temp</span>
+                      </div>
+                    </div>
+                    <span class="junk-size font-mono">1.42 GB</span>
+                  </div>
+                  <div class="junk-item">
+                    <div class="junk-item-meta">
+                      <input type="checkbox" checked id="chk-user-temp">
+                      <div class="junk-text-block">
+                        <span class="junk-name">User Temporary Directory</span>
+                        <span class="junk-path font-mono">C:\Users\Manuel\AppData\Local\Temp</span>
+                      </div>
+                    </div>
+                    <span class="junk-size font-mono">2.15 GB</span>
+                  </div>
+                  <div class="junk-item">
+                    <div class="junk-item-meta">
+                      <input type="checkbox" checked id="chk-browser-cache">
+                      <div class="junk-text-block">
+                        <span class="junk-name">Web Browser Caches</span>
+                        <span class="junk-path font-mono">Chrome & Edge User Data\Cache</span>
+                      </div>
+                    </div>
+                    <span class="junk-size font-mono">912 MB</span>
+                  </div>
+                  <div class="junk-item">
+                    <div class="junk-item-meta">
+                      <input type="checkbox" checked id="chk-crash-dumps">
+                      <div class="junk-text-block">
+                        <span class="junk-name">System Crash Dumps (.dmp)</span>
+                        <span class="junk-path font-mono">C:\Windows\Minidump</span>
+                      </div>
+                    </div>
+                    <span class="junk-size font-mono">348 MB</span>
+                  </div>
+                  <div class="junk-item">
+                    <div class="junk-item-meta">
+                      <input type="checkbox" checked id="chk-thumbnail-cache">
+                      <div class="junk-text-block">
+                        <span class="junk-name">Windows Thumbnail Cache</span>
+                        <span class="junk-path font-mono">C:\Users\Manuel\AppData\Local\Explorer\thumbcache_*.db</span>
+                      </div>
+                    </div>
+                    <span class="junk-size font-mono">88 MB</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Lock Engine Logs -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>Locker Engine Console</h3>
+                <span class="badge badge-info font-mono">I/O Protection</span>
+              </div>
+              <div class="card-body">
+                <div class="log-console-box">
+                  <div class="log-lines font-mono" id="junk-log-console">
+                    <span class="log-info">[System] Junk cleaner scanner initialized.</span>
+                    <span class="log-info">[System] Awaiting instructions...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+        <!-- TURBO MODE TAB -->
+        <section class="tab-pane" id="pane-turbo">
+          <div class="grid-layout cols-3">
+            
+            <!-- Turbo Control Hero -->
+            <div class="glass-card span-2 highlight-glow turbo-hero-card">
+              <div class="card-header">
+                <div class="header-icon-group">
+                  <div class="pulse-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  </div>
+                  <div>
+                    <h3>Turbo Acceleration</h3>
+                    <p class="header-desc">Toggle extreme local system optimization. Restores power plans, disables telemetry, and parks cores for low-latency gaming/workloads.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body flex-row justify-between align-center">
+                <div class="turbo-status-block">
+                  <span class="turbo-status-label">Current State</span>
+                  <span class="turbo-status-val text-muted" id="turbo-state-badge">Standard Balanced</span>
+                </div>
+                
+                <div class="turbo-toggle-wrapper">
+                  <button class="btn btn-secondary btn-large" id="btn-turbo-toggle">
+                    Toggle Turbo Mode
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- CPU & Profile Tweaks -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>Hardware Profiles</h3>
+              </div>
+              <div class="card-body">
+                <div class="profile-details-list">
+                  <div class="profile-item">
+                    <span class="p-label">Power Plan active</span>
+                    <span class="p-value font-mono" id="turbo-powercfg">Dell Balanced Plan</span>
+                  </div>
+                  <div class="profile-item">
+                    <span class="p-label">Registry Tweak state</span>
+                    <span class="p-value font-mono text-muted" id="turbo-reg-tweak">Default Responsiveness</span>
+                  </div>
+                  <div class="profile-item">
+                    <span class="p-label">Thread Priority</span>
+                    <span class="p-value font-mono" id="turbo-thread-priority">Normal Scheduling</span>
+                  </div>
+                  <div class="profile-item">
+                    <span class="p-label">CPU Core Parking</span>
+                    <span class="p-value font-mono text-success" id="turbo-cores">Standard Windows Managed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Suspended Services -->
+            <div class="glass-card span-2">
+              <div class="card-header">
+                <h3>System Service Suspension</h3>
+                <span class="header-subtitle">Non-critical services suspended during Turbo Acceleration</span>
+              </div>
+              <div class="card-body no-padding">
+                <table class="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Service Name</th>
+                      <th>Description</th>
+                      <th>Saved RAM</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>SysMain (Superfetch)</strong></td>
+                      <td>Pre-caches high-use apps in memory</td>
+                      <td class="font-mono">420 MB</td>
+                      <td><span class="service-pill" id="srv-sysmain">Active</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Windows Search</strong></td>
+                      <td>System indexes files for background search</td>
+                      <td class="font-mono">180 MB</td>
+                      <td><span class="service-pill" id="srv-search">Active</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Print Spooler</strong></td>
+                      <td>Queues print jobs in local background spool</td>
+                      <td class="font-mono">45 MB</td>
+                      <td><span class="service-pill" id="srv-spooler">Active</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Bluetooth Support Service</strong></td>
+                      <td>Manages local Bluetooth radio hardware</td>
+                      <td class="font-mono">30 MB</td>
+                      <td><span class="service-pill" id="srv-bluetooth">Active</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>DiagTrack (Telemetry)</strong></td>
+                      <td>Collects system health to send to MS</td>
+                      <td class="font-mono">88 MB</td>
+                      <td><span class="service-pill" id="srv-diagtrack">Active</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Suspended Process Tree -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>Suspended Processes</h3>
+                <span class="header-subtitle font-mono">SIGSTOP Sent to Background Apps</span>
+              </div>
+              <div class="card-body no-padding">
+                <table class="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Process Name</th>
+                      <th>State</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>discord.exe</strong> (Helper)</td>
+                      <td><span class="process-state-pill" id="prc-discord">Running</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>steam.exe</strong> (Launcher)</td>
+                      <td><span class="process-state-pill" id="prc-steam">Running</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>spotify.exe</strong> (Web Helper)</td>
+                      <td><span class="process-state-pill" id="prc-spotify">Running</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>epicgames.exe</strong> (Core)</td>
+                      <td><span class="process-state-pill" id="prc-epic">Running</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+        <!-- NETWORK SCANNER TAB -->
+        <section class="tab-pane" id="pane-network">
+          <div class="grid-layout cols-3">
+            
+            <!-- Network Control Panel -->
+            <div class="glass-card span-3">
+              <div class="card-header">
+                <h3>Sentinel Network Security Audit</h3>
+                <p class="header-desc">Scans loopback interfaces for dangerous exposed ports and audits local adapter configurations safely.</p>
+              </div>
+              <div class="card-body">
+                <div class="scan-control-panel">
+                  <div class="scan-button-group">
+                    <button class="btn btn-primary btn-large" id="btn-net-scan">
+                      <svg class="icon spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10zM2 12h20"/></svg>
+                      <span id="net-btn-text">Audit Local Network</span>
+                    </button>
+                  </div>
+                  
+                  <!-- Net Progress Overlay -->
+                  <div class="scan-progress-area hidden" id="net-progress-container">
+                    <div class="progress-bar-outer">
+                      <div class="progress-bar-inner" id="net-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-status-row">
+                      <span class="progress-status-text" id="net-status-text">Starting port analysis...</span>
+                      <span class="progress-percentage font-mono" id="net-progress-pct">0%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Local Adapter Info & Gateway Audit -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>Adapter Interfaces</h3>
+              </div>
+              <div class="card-body">
+                <div class="net-specs-list">
+                  <div class="net-spec-item">
+                    <span class="ns-label">Active Connection</span>
+                    <span class="ns-value font-mono">Wi-Fi (Intel Wi-Fi 6E AX211)</span>
+                  </div>
+                  <div class="net-spec-item">
+                    <span class="ns-label">SSID Profile</span>
+                    <span class="ns-value font-mono">DelgadoLogic_HQ_Secure</span>
+                  </div>
+                  <div class="net-spec-item">
+                    <span class="ns-label">WiFi Cipher Mode</span>
+                    <span class="ns-value font-mono text-success">WPA3-Personal (AES)</span>
+                  </div>
+                  <div class="net-spec-item">
+                    <span class="ns-label">DNS Resolver</span>
+                    <span class="ns-value font-mono text-success">192.168.1.1 (DNSSEC Validated)</span>
+                  </div>
+                  <div class="net-spec-item">
+                    <span class="ns-label">Windows Firewall</span>
+                    <span class="ns-value font-mono text-success">Active (All Profiles Encrypted)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Port Scan Details -->
+            <div class="glass-card span-2">
+              <div class="card-header">
+                <h3>Localhost Port Diagnostics</h3>
+                <span class="header-subtitle">Scanning loopback IP for open risky application ports</span>
+              </div>
+              <div class="card-body no-padding">
+                <div class="empty-state" id="net-details-empty">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10zM2 12h20"/></svg>
+                  <p>Run network audit to execute async port mappings</p>
+                </div>
+                
+                <table class="dashboard-table hidden" id="net-ports-table">
+                  <thead>
+                    <tr>
+                      <th>Port ID</th>
+                      <th>Service Name</th>
+                      <th>Expected Risk</th>
+                      <th>Audit Verdict</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="font-mono">Port 80 (TCP)</td>
+                      <td class="font-mono">HTTP Server</td>
+                      <td>Low</td>
+                      <td><span class="port-status safe">Closed (Safe)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono">Port 135 (TCP)</td>
+                      <td class="font-mono">MS-RPC Endpoint</td>
+                      <td>Medium</td>
+                      <td><span class="port-status safe">Listening (Local-Only)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono">Port 445 (TCP)</td>
+                      <td class="font-mono">Microsoft-DS SMB</td>
+                      <td>High</td>
+                      <td><span class="port-status safe">Closed (Safe)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono">Port 3389 (TCP)</td>
+                      <td class="font-mono">Remote Desktop (RDP)</td>
+                      <td class="text-danger">Critical Risk</td>
+                      <td><span class="port-status risky" id="rdp-port-verdict">Listening (Exposed Endpoint)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono">Port 5900 (TCP)</td>
+                      <td class="font-mono">VNC System Remote</td>
+                      <td>High</td>
+                      <td><span class="port-status safe">Closed (Safe)</span></td>
+                    </tr>
+                    <tr>
+                      <td class="font-mono">Port 8080 (TCP)</td>
+                      <td class="font-mono">Alternative Web HTTP</td>
+                      <td>Medium</td>
+                      <td><span class="port-status safe">Closed (Safe)</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+        <!-- REGISTRY SURGEON TAB -->
+        <section class="tab-pane" id="pane-registry">
+          <div class="grid-layout cols-3">
+            
+            <!-- Control Header -->
+            <div class="glass-card span-3">
+              <div class="card-header">
+                <h3>Registry Surgeon Analysis</h3>
+                <p class="header-desc">Perform safe registry integrity scans. Identify orphans and dangling ActiveX, COM, path configurations without HKLM security blockages.</p>
+              </div>
+              <div class="card-body">
+                <div class="scan-control-panel">
+                  <div class="scan-button-group">
+                    <button class="btn btn-primary btn-large" id="btn-reg-scan">
+                      <svg class="icon spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                      <span id="reg-btn-text">Audit Registry Integrity</span>
+                    </button>
+                    <button class="btn btn-success btn-large hidden" id="btn-reg-fix">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      Reconstruct & Repair Keys
+                    </button>
+                  </div>
+                  
+                  <!-- Progress Overlay -->
+                  <div class="scan-progress-area hidden" id="reg-progress-container">
+                    <div class="progress-bar-outer">
+                      <div class="progress-bar-inner" id="reg-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-status-row">
+                      <span class="progress-status-text" id="reg-status-text">Scanning keys...</span>
+                      <span class="progress-percentage font-mono" id="reg-progress-pct">0%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Issues Table -->
+            <div class="glass-card span-2">
+              <div class="card-header">
+                <h3>Integrity Infractions Detected</h3>
+                <span class="header-subtitle" id="reg-count-sub">Run registry audit to locate broken keys.</span>
+              </div>
+              <div class="card-body no-padding">
+                <div class="empty-state" id="reg-details-empty">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                  <p>Awaiting registry security diagnostic sweep</p>
+                </div>
+                
+                <table class="dashboard-table hidden" id="reg-issues-table">
+                  <thead>
+                    <tr>
+                      <th>Registry Category</th>
+                      <th>Root Path Location</th>
+                      <th>Dangling Issues</th>
+                      <th>Risk Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>ActiveX / COM</strong></td>
+                      <td class="font-mono">HKCU\Software\Classes\CLSID</td>
+                      <td>14 Orphaned References</td>
+                      <td><span class="badge badge-info font-mono">Low</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Shared DLLs</strong></td>
+                      <td class="font-mono">HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\SharedDlls</td>
+                      <td>8 Dead Path Pointers</td>
+                      <td><span class="badge badge-info font-mono">Low</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Application Paths</strong></td>
+                      <td class="font-mono">HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths</td>
+                      <td>3 Broken Executable References</td>
+                      <td><span class="badge badge-warning font-mono">Medium</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>System Installers</strong></td>
+                      <td class="font-mono">HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData</td>
+                      <td>5 Dangling MSI References</td>
+                      <td><span class="badge badge-warning font-mono">Medium</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Registry Surgeon Logs -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>Surgeon Log Terminal</h3>
+                <span class="badge badge-pulse">Read-Only Safety Hook</span>
+              </div>
+              <div class="card-body">
+                <div class="log-console-box">
+                  <div class="log-lines font-mono" id="reg-log-console">
+                    <span class="log-info">[Surgeon] Safe-edit mode enabled. Registry changes will require confirmation.</span>
+                    <span class="log-info">[Surgeon] Awaiting diagnostic sweep...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+        <!-- LAZARUS RECOVERY TAB -->
+        <section class="tab-pane" id="pane-lazarus">
+          <div class="grid-layout cols-3">
+            
+            <!-- Lazarus Hero Status -->
+            <div class="glass-card span-3 highlight-glow">
+              <div class="card-header">
+                <h3>Lazarus System Safeguard</h3>
+                <span class="badge badge-pulse">Phoenix Protection Enabled</span>
+              </div>
+              <div class="card-body">
+                <div class="lazarus-status-grid">
+                  <div class="lazarus-stat-item">
+                    <span class="lz-label">Sector Protection</span>
+                    <span class="lz-value font-mono text-success">100% Integrity</span>
+                  </div>
+                  <div class="lazarus-stat-item">
+                    <span class="lz-label">Automatic Shadow Copies</span>
+                    <span class="lz-value font-mono text-success">Daily Delta Backups Active</span>
+                  </div>
+                  <div class="lazarus-stat-item">
+                    <span class="lz-label">Shadow Storage Allocation</span>
+                    <span class="lz-value font-mono">22.6 GB / 50.0 GB Configured</span>
+                  </div>
+                  <div class="lazarus-stat-item">
+                    <span class="lz-label">Last Successful Snapshot</span>
+                    <span class="lz-value font-mono text-info">Yesterday 18:30 EST</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Restore Points / Recovery Blocks -->
+            <div class="glass-card span-2">
+              <div class="card-header">
+                <h3>Sovereign Recovery Blocks</h3>
+                <p class="header-desc">Cryptographically signed system snapshots stored strictly on your local disk partitions. No cloud dependence.</p>
+              </div>
+              <div class="card-body no-padding">
+                <table class="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Block ID</th>
+                      <th>Snapshot Name</th>
+                      <th>Timestamp (EST)</th>
+                      <th>Snapshot Size</th>
+                      <th>Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="table-row-selectable active" data-block-id="411">
+                      <td class="font-mono">#411</td>
+                      <td><strong>Pre-Driver Install Save State</strong></td>
+                      <td class="font-mono">2026-06-04 18:30:12</td>
+                      <td class="font-mono">18.42 GB</td>
+                      <td><span class="restore-pill auto">Auto</span></td>
+                    </tr>
+                    <tr class="table-row-selectable" data-block-id="410">
+                      <td class="font-mono">#410</td>
+                      <td><strong>Daily Differential System Delta</strong></td>
+                      <td class="font-mono">2026-06-03 04:00:00</td>
+                      <td class="font-mono">4.10 GB</td>
+                      <td><span class="restore-pill sched">Scheduled</span></td>
+                    </tr>
+                    <tr class="table-row-selectable" data-block-id="409">
+                      <td class="font-mono">#409</td>
+                      <td><strong>Manual System Baselining Block</strong></td>
+                      <td class="font-mono">2026-06-01 12:15:44</td>
+                      <td class="font-mono">142 MB</td>
+                      <td><span class="restore-pill manual">Manual</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Actions & Verification console -->
+            <div class="glass-card">
+              <div class="card-header">
+                <h3>Phoenix Recovery Commands</h3>
+              </div>
+              <div class="card-body vertical-buttons">
+                <button class="btn btn-secondary btn-action" id="btn-lz-snapshot">
+                  Create Local Snapshot
+                </button>
+                <button class="btn btn-secondary btn-action" id="btn-lz-verify">
+                  Verify Sector Integrity
+                </button>
+                <button class="btn btn-danger btn-action" id="btn-lz-restore">
+                  Restore Selected Block
+                </button>
+                
+                <div class="restore-action-box" id="lazarus-message-box" style="margin-top: 1rem; font-size: 0.8rem; line-height: 1.4;">
+                  <span class="text-muted font-mono" id="lazarus-log-text">Phoenix system ready. Select a recovery block to begin.</span>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </section>
+        
+      </div>
+      
+    </main>
+    
+  </div>
+
+  <!-- JavaScript Link -->
+  <script src="app.js"></script>
+</body>
+</html>

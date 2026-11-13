@@ -123,7 +123,7 @@ public static class DiskIO
 
 /// <summary>
 /// CNG (Cryptography Next Generation) interop for hardware-accelerated crypto.
-/// Used by LogicFlow.Licensing for RSA validation and LogicFlow.Lazarus for file hashing.
+/// Used by OmniLicense for RSA validation and LogicFlow.Lazarus for file hashing.
 /// </summary>
 public static class CryptoNative
 {

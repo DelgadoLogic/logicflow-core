@@ -153,14 +153,15 @@ public sealed class NetworkScanner
                     var baseBytes = localIp.GetAddressBytes();
                     var maskBytes = mask.GetAddressBytes();
 
-                    for (int i = 1; i < 255; i++)
+                    var devicesLock = new object();
+                    System.Threading.Tasks.Parallel.For(1, 255, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = 64 }, i =>
                     {
                         var targetBytes = new byte[4];
                         for (int j = 0; j < 4; j++)
                             targetBytes[j] = (byte)((baseBytes[j] & maskBytes[j]) | (~maskBytes[j] & (j == 3 ? i : 0)));
 
                         var targetIp = new IPAddress(targetBytes);
-                        if (targetIp.Equals(localIp)) continue;
+                        if (targetIp.Equals(localIp)) return;
 
                         try
                         {
@@ -170,16 +171,20 @@ public sealed class NetworkScanner
 
                             if (SendARP(ipInt, 0, mac, ref macLen) == 0)
                             {
-                                devices.Add(new ArpDevice
+                                var device = new ArpDevice
                                 {
                                     IpAddress = targetIp.ToString(),
                                     MacAddress = string.Join(":", mac.Select(b => b.ToString("X2"))),
                                     Interface = nic.Name
-                                });
+                                };
+                                lock (devicesLock)
+                                {
+                                    devices.Add(device);
+                                }
                             }
                         }
                         catch { /* ARP failed for this IP — normal */ }
-                    }
+                    });
                 }
             }
 

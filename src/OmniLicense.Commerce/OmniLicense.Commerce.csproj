@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OmniLicense.Commerce</RootNamespace>
+    <AssemblyName>OmniLicense.Commerce</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Description>OmniLicense.Commerce — PayPal one-time purchase engine ($29.99 Pro) with Orders API v2 and webhook fulfillment</Description>
+    <Company>DelgadoLogic.Tech</Company>
+    <Product>LogicFlow</Product>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="PayPalServerSdk" Version="2.2.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OmniCore.Engine\OmniCore.Engine.csproj" />
+    <ProjectReference Include="..\OmniLicense\OmniLicense.csproj" />
+  </ItemGroup>
+</Project>

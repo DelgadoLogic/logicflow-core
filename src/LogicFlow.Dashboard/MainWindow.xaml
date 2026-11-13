@@ -5,7 +5,8 @@
     Height="800" Width="1280" MinWidth="1024" MinHeight="700"
     WindowStartupLocation="CenterScreen" WindowStyle="None"
     Icon="pack://application:,,,/Assets/AppIcon.jpg"
-    Background="{StaticResource BrandDarkBrush}" AllowsTransparency="True">
+    Background="{StaticResource BrandDarkBrush}" AllowsTransparency="True"
+    FontFamily="{StaticResource AppFont}">
     
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0"/>
@@ -43,23 +44,25 @@
                                    Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,8"/>
                         <Button Content="🚀 UPGRADE TO PRO — $9.99/mo" Style="{StaticResource ActionButton}" 
                                 FontSize="11" Click="OnUpgradeClick"/>
+                        <TextBlock Text="v1.0.0 (Build 9832) • System: Online" FontSize="9" 
+                                   Foreground="#4B5563" Margin="0,12,0,0" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
                 <StackPanel Margin="12,0">
                     <TextBlock Text="MODULES" FontSize="10" FontWeight="Bold" Margin="8,0,0,8"
                                Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <Button x:Name="NavDashboard" Content="🏠  Dashboard" Style="{StaticResource NavButton}" Click="OnNavDashboard"/>
-                    <Button x:Name="NavSentinel" Content="🛡  Sentinel — Security" Style="{StaticResource NavButton}" Click="OnNavSentinel"/>
-                    <Button x:Name="NavGuardian" Content="⚡  Guardian — Performance" Style="{StaticResource NavButton}" Click="OnNavGuardian"/>
-                    <Button x:Name="NavMonitor" Content="📈  Resource Monitor" Style="{StaticResource NavButton}" Click="OnNavMonitor"/>
-                    <Button x:Name="NavToolbox" Content="🧰  Toolbox — Utilities" Style="{StaticResource NavButton}" Click="OnNavToolbox"/>
-                    <Button x:Name="NavLazarus" Content="🔄  Lazarus — Recovery" Style="{StaticResource NavButton}" Click="OnNavLazarus"/>
-                    <Button x:Name="NavRegistry" Content="🔧  Registry Surgeon" Style="{StaticResource NavButton}" Click="OnNavRegistry"/>
+                    <Button x:Name="NavDashboard" Content="🏠  Dashboard" Style="{StaticResource NavButtonActive}" Click="OnNavDashboard" ToolTip="System overview &amp; quick actions"/>
+                    <Button x:Name="NavSentinel" Content="🛡  Sentinel — Security" Style="{StaticResource NavButton}" Click="OnNavSentinel" ToolTip="Vulnerability scanning, network security, privacy"/>
+                    <Button x:Name="NavGuardian" Content="⚡  Guardian — Performance" Style="{StaticResource NavButton}" Click="OnNavGuardian" ToolTip="Drivers, bloatware, startup, disk health, tweaks"/>
+                    <Button x:Name="NavMonitor" Content="📈  Resource Monitor" Style="{StaticResource NavButton}" Click="OnNavMonitor" ToolTip="Live CPU, RAM, disk &amp; network metrics"/>
+                    <Button x:Name="NavToolbox" Content="🧰  Toolbox — Utilities" Style="{StaticResource NavButton}" Click="OnNavToolbox" ToolTip="Junk cleaner, memory optimizer, turbo mode"/>
+                    <Button x:Name="NavLazarus" Content="🔄  Lazarus — Recovery" Style="{StaticResource NavButton}" Click="OnNavLazarus" ToolTip="Deep-sector data recovery &amp; MTP scanning"/>
+                    <Button x:Name="NavRegistry" Content="🔧  Registry Surgeon" Style="{StaticResource NavButton}" Click="OnNavRegistry" ToolTip="Registry integrity analysis &amp; repair"/>
                     
                     <TextBlock Text="SYSTEM" FontSize="10" FontWeight="Bold" Margin="8,24,0,8"
                                Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <Button x:Name="NavSettings" Content="⚙  Settings" Style="{StaticResource NavButton}" Click="OnNavSettings"/>
+                    <Button x:Name="NavSettings" Content="⚙  Settings" Style="{StaticResource NavButton}" Click="OnNavSettings" ToolTip="App settings, HWID, data paths"/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -72,18 +75,20 @@
             </Grid.RowDefinitions>
 
             <!-- Title Bar -->
-            <Border Grid.Row="0" Background="#0D1117" Padding="20,0">
+            <Border Grid.Row="0" Background="#0D1117" Padding="20,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1">
                 <DockPanel>
-                    <TextBlock x:Name="PageTitle" Text="System Dashboard" FontSize="16" FontWeight="Bold"
-                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="PageTitle" Text="System Dashboard" FontSize="16" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        <Border x:Name="PageBadge" Background="#1E293B" CornerRadius="6" Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                            <TextBlock x:Name="PageBadgeText" Text="" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource BrandCyanBrush}"/>
+                        </Border>
+                    </StackPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
                                 WindowChrome.IsHitTestVisibleInChrome="True">
-                        <Button Content="─" Width="40" Height="30" Click="OnMinimize"
-                                Background="Transparent" Foreground="Gray" BorderThickness="0" FontSize="14"/>
-                        <Button Content="□" Width="40" Height="30" Click="OnMaximize"
-                                Background="Transparent" Foreground="Gray" BorderThickness="0" FontSize="14"/>
-                        <Button Content="✕" Width="40" Height="30" Click="OnClose"
-                                Background="Transparent" Foreground="Gray" BorderThickness="0" FontSize="14"/>
+                        <Button Content="━" Style="{StaticResource ChromeButton}" Click="OnMinimize" ToolTip="Minimize"/>
+                        <Button Content="☐" Style="{StaticResource ChromeButton}" Click="OnMaximize" ToolTip="Maximize"/>
+                        <Button Content="✕" Style="{StaticResource ChromeCloseButton}" Click="OnClose" ToolTip="Close" Foreground="#6B7280"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -93,32 +98,35 @@
 
                 <!-- ──── Dashboard Page ──── -->
                 <ScrollViewer x:Name="PageDashboard" VerticalScrollBarVisibility="Auto" Padding="24">
-                    <StackPanel>
+                    <StackPanel Opacity="1">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform x:Name="DashboardTranslate" X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
                         <!-- Score Cards — CLICKABLE → navigate to module -->
                         <!-- Score Cards Row 1 -->
                         <UniformGrid Columns="4" Margin="0,0,0,12">
-                            <Border Style="{StaticResource GlassPanel}" Margin="0,0,12,0" Cursor="Hand" MouseLeftButtonDown="OnClickSecurityCard">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="0,0,12,0" Cursor="Hand" MouseLeftButtonDown="OnClickSecurityCard">
                                 <StackPanel>
                                     <TextBlock Text="SECURITY SCORE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="SecurityScore" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="SecuritySub" Text="🛡 Click to scan" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource GlassPanel}" Margin="6,0" Cursor="Hand" MouseLeftButtonDown="OnClickPerfCard">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0" Cursor="Hand" MouseLeftButtonDown="OnClickPerfCard">
                                 <StackPanel>
                                     <TextBlock Text="PERFORMANCE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="PerfScore" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandCyanBrush}" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="PerfSub" Text="⚡ Click to scan" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource GlassPanel}" Margin="6,0" Cursor="Hand" MouseLeftButtonDown="OnClickRegCard">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0" Cursor="Hand" MouseLeftButtonDown="OnClickRegCard">
                                 <StackPanel>
                                     <TextBlock Text="REGISTRY HEALTH" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="RegScore" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandPurpleBrush}" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="RegSub" Text="🔧 Click to scan" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource GlassPanel}" Margin="12,0,0,0" Cursor="Hand" MouseLeftButtonDown="OnClickRecoveryCard">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="12,0,0,0" Cursor="Hand" MouseLeftButtonDown="OnClickRecoveryCard">
                                 <StackPanel>
                                     <TextBlock Text="RECOVERY READY" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="RecoveryStatus" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,8,0,0"/>
@@ -129,28 +137,28 @@
 
                         <!-- Score Cards Row 2 — New engines -->
                         <UniformGrid Columns="4" Margin="0,0,0,20">
-                            <Border Style="{StaticResource GlassPanel}" Margin="0,0,12,0">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="0,0,12,0">
                                 <StackPanel>
                                     <TextBlock Text="HEALTH SCORE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="HealthScoreLabel" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandCyanBrush}" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="HealthScoreSub" Text="🏥 Run 1-Click to calculate" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource GlassPanel}" Margin="6,0">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0">
                                 <StackPanel>
                                     <TextBlock Text="DISK HEALTH" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="DiskHealthLabel" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="DiskHealthSub" Text="💾 S.M.A.R.T. status" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource GlassPanel}" Margin="6,0">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="6,0">
                                 <StackPanel>
                                     <TextBlock Text="MEMORY" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="MemoryLabel" Text="—" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource BrandPurpleBrush}" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="MemorySub" Text="🧠 RAM usage" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource GlassPanel}" Margin="12,0,0,0">
+                            <Border Style="{StaticResource ScoreCardPanel}" Margin="12,0,0,0">
                                 <StackPanel>
                                     <TextBlock Text="TURBO MODE" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
                                     <TextBlock x:Name="TurboStatusLabel" Text="OFF" FontSize="36" FontWeight="ExtraBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0"/>
@@ -207,7 +215,10 @@
 
                 <!-- ──── Sentinel Page ──── -->
                 <ScrollViewer x:Name="PageSentinel" VerticalScrollBarVisibility="Auto" Padding="24" Visibility="Collapsed">
-                    <StackPanel>
+                    <StackPanel x:Name="SentinelContent" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,12">
@@ -304,7 +315,10 @@
 
                 <!-- ──── Guardian Page ──── -->
                 <ScrollViewer x:Name="PageGuardian" VerticalScrollBarVisibility="Auto" Padding="24" Visibility="Collapsed">
-                    <StackPanel>
+                    <StackPanel x:Name="GuardianContent" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
                         <!-- Driver Health -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
@@ -413,7 +427,10 @@
 
                 <!-- ──── Lazarus Page ──── -->
                 <ScrollViewer x:Name="PageLazarus" VerticalScrollBarVisibility="Auto" Padding="24" Visibility="Collapsed">
-                    <StackPanel>
+                    <StackPanel x:Name="LazarusContent" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
                                 <TextBlock Text="DATA RECOVERY ENGINE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
@@ -437,7 +454,10 @@
 
                 <!-- ──── Registry Page ──── -->
                 <ScrollViewer x:Name="PageRegistry" VerticalScrollBarVisibility="Auto" Padding="24" Visibility="Collapsed">
-                    <StackPanel>
+                    <StackPanel x:Name="RegistryContent" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,12">
@@ -504,7 +524,10 @@
 
                 <!-- ──── Resource Monitor Page ──── -->
                 <ScrollViewer x:Name="PageMonitor" VerticalScrollBarVisibility="Auto" Padding="24" Visibility="Collapsed">
-                    <StackPanel>
+                    <StackPanel x:Name="MonitorContent" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
 
                         <!-- Header / Controls -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,16">
@@ -600,7 +623,10 @@
 
                 <!-- ──── Toolbox Page (NEW) ──── -->
                 <ScrollViewer x:Name="PageToolbox" VerticalScrollBarVisibility="Auto" Padding="24" Visibility="Collapsed">
-                    <StackPanel>
+                    <StackPanel x:Name="ToolboxContent" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
                         <!-- 1-Click Maintenance -->
                         <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
                             <StackPanel>
@@ -651,24 +677,38 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Turbo Mode -->
-                        <Border Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                        <!-- Turbo Mode Overhaul -->
+                        <Border x:Name="TurboModeContainer" Style="{StaticResource GlassPanel}" Margin="0,0,0,20">
+                            <!-- We will animate border color programmatically when mode activates -->
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,12">
-                                    <TextBlock Text="🚀 TURBO MODE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="🚀 TURBO MODE" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <!-- Neon Toggles right-aligned -->
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                        <Button x:Name="BtnTurboGaming" Content="🎮 Gaming" Style="{StaticResource ActionButton}" Click="OnTurboGaming" Margin="0,0,8,0" Background="#FF6F00"/>
-                                        <Button x:Name="BtnTurboWork" Content="💼 Work" Style="{StaticResource ActionButton}" Click="OnTurboWork" Margin="0,0,8,0"/>
-                                        <Button x:Name="BtnTurboBattery" Content="🔋 Battery" Style="{StaticResource ActionButton}" Click="OnTurboBattery" Margin="0,0,8,0"/>
-                                        <Button x:Name="BtnTurboOff" Content="⏹ Deactivate" Style="{StaticResource ActionButton}" Click="OnTurboDeactivate"
-                                                Visibility="Collapsed" Background="#E53935"/>
+                                        <Button x:Name="BtnTurboGaming" Content="🎮 GAMING" Style="{StaticResource OutlineButton}" Click="OnTurboGaming" Margin="0,0,8,0" Foreground="{StaticResource TurboGamingOrangeBrush}"  BorderBrush="{StaticResource TurboGamingOrangeBrush}" />
+                                        <Button x:Name="BtnTurboWork" Content="💼 WORK" Style="{StaticResource OutlineButton}" Click="OnTurboWork" Margin="0,0,8,0" Foreground="{StaticResource TurboWorkPurpleBrush}" BorderBrush="{StaticResource TurboWorkPurpleBrush}"/>
+                                        <Button x:Name="BtnTurboBattery" Content="🔋 BATTERY" Style="{StaticResource OutlineButton}" Click="OnTurboBattery" Margin="0,0,8,0" Foreground="{StaticResource TurboBatteryGreenBrush}" BorderBrush="{StaticResource TurboBatteryGreenBrush}"/>
+                                        <Button x:Name="BtnTurboServer" Content="🖥 SERVER" Style="{StaticResource OutlineButton}" Click="OnTurboServer" Margin="0,0,8,0" Foreground="{StaticResource BrandCyanBrush}" BorderBrush="{StaticResource BrandCyanBrush}"/>
+                                        <Button x:Name="BtnTurboOff" Content="⏹ REVERT TO NORMAL" Style="{StaticResource ActionButton}" Click="OnTurboDeactivate"
+                                                Visibility="Collapsed" Background="{StaticResource DangerRedBrush}" Foreground="White" FontWeight="Bold"/>
                                     </StackPanel>
                                 </DockPanel>
-                                <TextBlock x:Name="TurboModeStatus" Text="Temporarily stop background processes for max performance" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <Border x:Name="TurboSummaryBar" Background="#1A1F2E" CornerRadius="8" Padding="12,8" Margin="0,12,0,0" Visibility="Collapsed">
-                                    <TextBlock x:Name="TurboSummaryText" Text="" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SuccessGreenBrush}"/>
+                                
+                                <TextBlock x:Name="TurboModeStatus" Text="Forcefully suspend non-essential processes, configure CPU affinity, and alter network routing for raw power." FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                
+                                <!-- Active Data Reporting Panel -->
+                                <Border x:Name="TurboSummaryBar" Background="#0A0E14" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="8" Padding="12,12" Margin="0,16,0,0" Visibility="Collapsed">
+                                    <StackPanel>
+                                        <TextBlock x:Name="TurboSummaryText" Text="SYSTEM OVERRIDDEN" FontSize="14" FontWeight="ExtraBold" Foreground="{StaticResource TurboGamingOrangeBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                        <ItemsControl x:Name="TurboActionList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" Margin="0,2"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </Border>
-                                <ItemsControl x:Name="TurboActionList" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
 
@@ -720,7 +760,10 @@
 
                 <!-- ──── Settings Page ──── -->
                 <ScrollViewer x:Name="PageSettings" VerticalScrollBarVisibility="Auto" Padding="24" Visibility="Collapsed">
-                    <StackPanel>
+                    <StackPanel x:Name="SettingsContent" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform X="0" Y="0"/>
+                        </StackPanel.RenderTransform>
                         <Border Style="{StaticResource GlassPanel}">
                             <StackPanel>
                                 <TextBlock Text="APPLICATION SETTINGS" FontSize="14" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
@@ -735,12 +778,34 @@
 
                 <!-- ═══ Global Loading Overlay ═══ -->
                 <Border x:Name="LoadingOverlay" Background="#CC0A0E1A" Visibility="Collapsed">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock x:Name="LoadingText" Text="Scanning..." FontSize="18" FontWeight="Bold"
-                                   Foreground="{StaticResource BrandCyanBrush}" HorizontalAlignment="Center"/>
-                        <ProgressBar IsIndeterminate="True" Width="200" Height="4" Margin="0,16,0,0"
-                                     Foreground="{StaticResource BrandCyanBrush}" Background="#1A1F2E"/>
-                    </StackPanel>
+                    <Border Background="#E0111827" CornerRadius="20" Padding="40,32" 
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            BorderBrush="#2A3040" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="40" ShadowDepth="8" Opacity="0.5" Color="Black"/>
+                        </Border.Effect>
+                        <StackPanel HorizontalAlignment="Center">
+                            <!-- Spinning arc indicator -->
+                            <Border x:Name="SpinnerRing" Width="48" Height="48" CornerRadius="24"
+                                    BorderThickness="3" BorderBrush="#2A3040"
+                                    RenderTransformOrigin="0.5,0.5" Margin="0,0,0,20">
+                                <Border.RenderTransform>
+                                    <RotateTransform x:Name="SpinnerRotation" Angle="0"/>
+                                </Border.RenderTransform>
+                                <!-- Inner arc (cyan accent) -->
+                                <Border Width="42" Height="42" CornerRadius="21"
+                                        BorderThickness="3,0,0,3" 
+                                        BorderBrush="{StaticResource BrandCyanBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock x:Name="LoadingText" Text="Scanning..." FontSize="16" FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="LoadingSubText" Text="" FontSize="12" 
+                                       Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <ProgressBar x:Name="LoadingProgress" IsIndeterminate="True" Width="220" Height="4" Margin="0,16,0,0"
+                                         Foreground="{StaticResource BrandCyanBrush}" Background="#1A1F2E"/>
+                        </StackPanel>
+                    </Border>
                 </Border>
             </Grid>
         </Grid>

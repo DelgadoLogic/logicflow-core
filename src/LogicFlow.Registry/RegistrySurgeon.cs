@@ -735,7 +735,12 @@ public sealed class RepairEngine
             };
         }
 
-        // Create backup before any changes
+        // Trigger OmniCore.Engine's Smart Systems Rollback (Services snapshot + 5s buffer)
+        var sysLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<OmniCore.Engine.SmartRollbackEngine>.Instance;
+        var rollbackEngine = new OmniCore.Engine.SmartRollbackEngine(sysLogger, _backupDirectory);
+        rollbackEngine.TakeSnapshotAsync($"Pre-fix snapshot for {safeIssues.Count} registry issues").GetAwaiter().GetResult();
+
+        // Create registry backup before any changes
         var backupFile = CreateBackup($"Pre-fix backup for {safeIssues.Count} issues");
         int fixed_ = 0, failed = 0;
         var errors = new List<string>();

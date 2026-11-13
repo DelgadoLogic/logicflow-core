@@ -61,8 +61,9 @@ Name: "custom"; Description: "Custom installation"; Flags: iscustom
 [Components]
 Name: "main";   Description: "LogicFlow Dashboard";                               Types: full compact custom; Flags: fixed
 Name: "agent";  Description: "LogicFlow Background Agent (Windows Service)";       Types: full
-Name: "native"; Description: "Native Kernel Drivers & Crypto Engine";           Types: full
-Name: "docs";   Description: "Documentation & API Reference";                   Types: full
+Name: "cli";    Description: "LogicFlow Enterprise CLI (lf.exe)";                  Types: full custom
+Name: "native"; Description: "Native Kernel Drivers && Crypto Engine";           Types: full
+Name: "docs";   Description: "Documentation && API Reference";                   Types: full
 Name: "aeon";   Description: "Aeon Browser by DelgadoLogic (recommended)";       Types: full; Flags: checkablealone
 
 [Tasks]
@@ -79,6 +80,9 @@ Name: "telemetry"; Description: "Send anonymous system data to help improve Logi
 [Files]
 ; Main Dashboard Application
 Source: "..\publish\dashboard\*"; DestDir: "{app}"; Components: main; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Enterprise CLI
+Source: "..\publish\cli\*"; DestDir: "{app}\CLI"; Components: cli; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Background Agent Service
 Source: "..\publish\agent\*"; DestDir: "{app}\Agent"; Components: agent; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -135,6 +139,10 @@ Root: HKLM; Subkey: "SOFTWARE\DelgadoLogic\LogicFlow"; ValueType: string; ValueN
 ; App Paths registration (allows running "LogicFlow" from Run dialog)
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\LogicFlow.exe"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName}"; Flags: uninsdeletekey
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\LogicFlow.exe"; ValueType: string; ValueName: "Path"; ValueData: "{app}"
+
+; App Paths for Enterprise CLI
+Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\lf.exe"; ValueType: string; ValueName: ""; ValueData: "{app}\CLI\lf.exe"; Components: cli; Flags: uninsdeletekey
+Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\lf.exe"; ValueType: string; ValueName: "Path"; ValueData: "{app}\CLI"; Components: cli
 
 ; === Aeon Browser registry entries ===
 Root: HKLM; Subkey: "SOFTWARE\DelgadoLogic\Aeon"; ValueType: string; ValueName: "InstallPath"; ValueData: "{#AeonInstallDir}"; Components: aeon; Flags: uninsdeletekey

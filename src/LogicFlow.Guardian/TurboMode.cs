@@ -192,6 +192,32 @@ public sealed class TurboMode
         BoostGpuPriority = true
     };
 
+    public static readonly TurboProfile ServerProfile = new()
+    {
+        Name = "🖥️ Server Mode",
+        Description = "Optimizes the system for hosting servers or background tasks. Prioritizes network and background performance.",
+        ServicesToStop = [
+            "SysMain", "WSearch", "DiagTrack", "dmwappushservice",
+            "WerSvc", "wuauserv", "BITS", "PcaSvc",
+            "MapsBroker", "lfsvc", "Fax", "PrintNotify",
+            "XblAuthManager", "XblGameSave", "XboxNetApiSvc"
+        ],
+        ProcessesToKill = [
+            "OneDrive", "Teams", "Spotify", "Discord",
+            "YourPhone", "PhoneExperienceHost",
+            "GameBar", "GameBarPresenceWriter",
+            "WidgetService", "Widgets"
+        ],
+        DisableNotifications = true,
+        SetHighPriority = true,
+        SwitchPowerPlan = true,
+        OptimizeCpuAffinity = false,
+        OptimizeNetwork = true,
+        DisableVisualEffects = true,
+        SetTimerResolution = false,
+        BoostGpuPriority = false
+    };
+
     // ─── Activate ────────────────────────────────────────────────────────
 
     /// <summary>

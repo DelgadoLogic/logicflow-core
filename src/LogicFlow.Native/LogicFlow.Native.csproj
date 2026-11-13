@@ -13,6 +13,6 @@
     <Copyright>© 2026 DelgadoLogic.Tech. All rights reserved.</Copyright>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LogicFlow.Core\LogicFlow.Core.csproj" />
+    <ProjectReference Include="..\OmniCore.Engine\OmniCore.Engine.csproj" />
   </ItemGroup>
 </Project>

@@ -42,12 +42,21 @@ Write-Host "[OK] Dashboard published" -ForegroundColor Green
 
 # ─── Step 4: Publish Agent (self-contained) ────────────────────
 Write-Host "`n[3/5] Publishing Agent service..." -ForegroundColor Yellow
-dotnet publish (Join-Path $Root "src/LogicFlow.Agent/LogicFlow.Agent.csproj") `
+dotnet publish (Join-Path $Root "src/OmniService/OmniService.csproj") `
     -c $Configuration -r $Runtime --self-contained true `
     -p:PublishSingleFile=false `
     -o (Join-Path $publishDir "agent")
 if ($LASTEXITCODE -ne 0) { throw "Agent publish failed!" }
 Write-Host "[OK] Agent published" -ForegroundColor Green
+
+# ─── Step 4.5: Publish CLI (self-contained) ────────────────────
+Write-Host "`n[3.5/5] Publishing CLI..." -ForegroundColor Yellow
+dotnet publish (Join-Path $Root "src/LogicFlow.CLI/LogicFlow.CLI.csproj") `
+    -c $Configuration -r $Runtime --self-contained true `
+    -p:PublishSingleFile=true `
+    -o (Join-Path $publishDir "cli")
+if ($LASTEXITCODE -ne 0) { throw "CLI publish failed!" }
+Write-Host "[OK] CLI published" -ForegroundColor Green
 
 # ─── Step 5: Publish Native library ───────────────────────────
 Write-Host "`n[4/5] Publishing Native library..." -ForegroundColor Yellow

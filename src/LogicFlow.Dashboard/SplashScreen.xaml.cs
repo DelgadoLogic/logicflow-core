@@ -55,7 +55,7 @@ public partial class SplashWindow : Window
                 {
                     try
                     {
-                        using var pulse = new LogicFlow.Pulse.PulseClient();
+                        using var pulse = new OmniPulse.PulseClient();
                         await pulse.SendBaselineAsync();
                     }
                     catch { /* Silently fail — will retry on next launch */ }

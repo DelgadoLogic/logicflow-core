@@ -4,11 +4,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using LogicFlow.Core;
+using System.Windows.Media.Animation;
+using OmniCore.Engine;
 using LogicFlow.Sentinel;
 using LogicFlow.Guardian;
 using LogicFlow.Lazarus;
-using LogicFlow.Licensing;
+using OmniLicense;
 using LogicFlow.Native;
 using Microsoft.Extensions.Logging.Abstractions;
 using RegistryModule = LogicFlow.Registry;
@@ -66,6 +67,8 @@ public partial class MainWindow : Window
 
     // ─── Page panels ───
     private ScrollViewer[] _pages = [];
+    private System.Windows.Controls.Button[] _navButtons = [];
+    private System.Windows.Controls.Button? _activeNavButton;
 
     public MainWindow()
     {
@@ -77,6 +80,8 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         _pages = [PageDashboard, PageSentinel, PageGuardian, PageMonitor, PageToolbox, PageLazarus, PageRegistry, PageSettings];
+        _navButtons = [NavDashboard, NavSentinel, NavGuardian, NavMonitor, NavToolbox, NavLazarus, NavRegistry, NavSettings];
+        _activeNavButton = NavDashboard;
 
         // Populate system profile
         try
@@ -127,26 +132,71 @@ public partial class MainWindow : Window
     // ═══════════════════════════════════════════════════════════
     //  PAGE NAVIGATION
     // ═══════════════════════════════════════════════════════════
-    private void ShowPage(ScrollViewer target, string title)
+    private void ShowPage(ScrollViewer target, string title, System.Windows.Controls.Button navButton)
     {
+        // Update nav button active states
+        if (_activeNavButton != null && _activeNavButton != navButton)
+            _activeNavButton.Style = (Style)FindResource("NavButton");
+        navButton.Style = (Style)FindResource("NavButtonActive");
+        _activeNavButton = navButton;
+
+        // Hide all pages, show target
         foreach (var page in _pages) page.Visibility = Visibility.Collapsed;
         target.Visibility = Visibility.Visible;
         PageTitle.Text = title;
+
+        // Animate the page content with fade + slide
+        var content = FindPageContent(target);
+        if (content != null)
+        {
+            AnimatePageIn(content);
+        }
     }
 
-    private void OnNavDashboard(object s, RoutedEventArgs e) => ShowPage(PageDashboard, "System Dashboard");
-    private void OnNavSentinel(object s, RoutedEventArgs e) => ShowPage(PageSentinel, "Sentinel — Security Center");
-    private void OnNavGuardian(object s, RoutedEventArgs e) => ShowPage(PageGuardian, "Guardian — Performance");
+    private StackPanel? FindPageContent(ScrollViewer sv)
+    {
+        if (sv.Content is StackPanel sp) return sp;
+        return null;
+    }
+
+    private void AnimatePageIn(StackPanel panel)
+    {
+        panel.Opacity = 0;
+        var tt = panel.RenderTransform as TranslateTransform;
+        if (tt == null)
+        {
+            tt = new TranslateTransform();
+            panel.RenderTransform = tt;
+        }
+        tt.Y = 20;
+
+        var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        var slideIn = new DoubleAnimation(20, 0, TimeSpan.FromMilliseconds(300))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        panel.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+        tt.BeginAnimation(TranslateTransform.YProperty, slideIn);
+    }
+
+    private void OnNavDashboard(object s, RoutedEventArgs e) => ShowPage(PageDashboard, "System Dashboard", NavDashboard);
+    private void OnNavSentinel(object s, RoutedEventArgs e) => ShowPage(PageSentinel, "Sentinel — Security Center", NavSentinel);
+    private void OnNavGuardian(object s, RoutedEventArgs e) => ShowPage(PageGuardian, "Guardian — Performance", NavGuardian);
     private void OnNavMonitor(object s, RoutedEventArgs e)
     {
-        ShowPage(PageMonitor, "Resource Monitor — Live");
+        ShowPage(PageMonitor, "Resource Monitor — Live", NavMonitor);
         if (!_monitorRunning)
             OnStartMonitor(s, new RoutedEventArgs());
     }
-    private void OnNavToolbox(object s, RoutedEventArgs e) => ShowPage(PageToolbox, "Toolbox — Utilities");
-    private void OnNavLazarus(object s, RoutedEventArgs e) => ShowPage(PageLazarus, "Lazarus — Data Recovery");
-    private void OnNavRegistry(object s, RoutedEventArgs e) => ShowPage(PageRegistry, "Registry Surgeon");
-    private void OnNavSettings(object s, RoutedEventArgs e) => ShowPage(PageSettings, "Settings");
+    private void OnNavToolbox(object s, RoutedEventArgs e) => ShowPage(PageToolbox, "Toolbox — Utilities", NavToolbox);
+    private void OnNavLazarus(object s, RoutedEventArgs e) => ShowPage(PageLazarus, "Lazarus — Data Recovery", NavLazarus);
+    private void OnNavRegistry(object s, RoutedEventArgs e) => ShowPage(PageRegistry, "Registry Surgeon", NavRegistry);
+    private void OnNavSettings(object s, RoutedEventArgs e) => ShowPage(PageSettings, "Settings", NavSettings);
 
     // ═══════════════════════════════════════════════════════════
     //  RESOURCE MONITOR
@@ -325,25 +375,25 @@ public partial class MainWindow : Window
     // ═══════════════════════════════════════════════════════════
     private void OnClickSecurityCard(object s, MouseButtonEventArgs e)
     {
-        ShowPage(PageSentinel, "Sentinel — Security Center");
+        ShowPage(PageSentinel, "Sentinel — Security Center", NavSentinel);
         OnSentinelScan(s, new RoutedEventArgs());
     }
 
     private void OnClickPerfCard(object s, MouseButtonEventArgs e)
     {
-        ShowPage(PageGuardian, "Guardian — Performance");
+        ShowPage(PageGuardian, "Guardian — Performance", NavGuardian);
         OnDriverScan(s, new RoutedEventArgs());
     }
 
     private void OnClickRegCard(object s, MouseButtonEventArgs e)
     {
-        ShowPage(PageRegistry, "Registry Surgeon");
+        ShowPage(PageRegistry, "Registry Surgeon", NavRegistry);
         OnRegistryScan(s, new RoutedEventArgs());
     }
 
     private void OnClickRecoveryCard(object s, MouseButtonEventArgs e)
     {
-        ShowPage(PageLazarus, "Lazarus — Data Recovery");
+        ShowPage(PageLazarus, "Lazarus — Data Recovery", NavLazarus);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -353,8 +403,21 @@ public partial class MainWindow : Window
     {
         LoadingText.Text = message;
         LoadingOverlay.Visibility = Visibility.Visible;
+        
+        var anim = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 0,
+            To = 360,
+            Duration = TimeSpan.FromSeconds(1),
+            RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
+        };
+        SpinnerRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, anim);
     }
-    private void HideLoading() => LoadingOverlay.Visibility = Visibility.Collapsed;
+    private void HideLoading()
+    {
+        LoadingOverlay.Visibility = Visibility.Collapsed;
+        SpinnerRotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  SHOW / HIDE DETAIL TOGGLES
@@ -499,7 +562,7 @@ public partial class MainWindow : Window
 
     private void OnToggleTurbo(object s, RoutedEventArgs e)
     {
-        ShowPage(PageToolbox, "Toolbox — Utilities");
+        ShowPage(PageToolbox, "Toolbox — Utilities", NavToolbox);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1171,16 +1234,40 @@ public partial class MainWindow : Window
         try
         {
             var result = await Task.Run(() => _turboMode.Activate(profile));
+            
+            // Set dynamic branding based on mode
+            Brush accentBrush = name switch
+            {
+                "Gaming" => (Brush)FindResource("TurboGamingOrangeBrush"),
+                "Work" => (Brush)FindResource("TurboWorkPurpleBrush"),
+                "Battery" => (Brush)FindResource("TurboBatteryGreenBrush"),
+                _ => (Brush)FindResource("TextPrimaryBrush")
+            };
+
+            // Glow Effect styling
+            TurboModeContainer.BorderBrush = accentBrush;
+            TurboModeContainer.BorderThickness = new Thickness(2);
+            TurboSummaryText.Foreground = accentBrush;
+            
             TurboSummaryBar.Visibility = Visibility.Visible;
-            TurboSummaryText.Text = $"🚀 {name} Mode ACTIVE — {result.ServicesDisabled} services paused, {result.ProcessesKilled} processes stopped";
-            TurboModeStatus.Text = $"{name} Turbo is active";
-            TurboModeStatus.Foreground = (Brush)FindResource("SuccessGreenBrush");
+            TurboSummaryText.Text = $"SYSTEM OVERRIDDEN: {name.ToUpper()} MODE";
+            TurboModeStatus.Text = $"{result.ServicesDisabled} services paused, {result.ProcessesKilled} background processes killed. {result.MemoryFreedFormatted} RAM freed.";
+            TurboModeStatus.Foreground = accentBrush;
+            
+            // Load Live Native Output
+            TurboActionList.ItemsSource = result.Actions;
+
+            // Manage Toggles
+            BtnTurboGaming.Visibility = Visibility.Collapsed;
+            BtnTurboWork.Visibility = Visibility.Collapsed;
+            BtnTurboBattery.Visibility = Visibility.Collapsed;
+            BtnTurboServer.Visibility = Visibility.Collapsed;
             BtnTurboOff.Visibility = Visibility.Visible;
 
-            // Update Dashboard
-            TurboStatusLabel.Text = "ON";
-            TurboStatusLabel.Foreground = (Brush)FindResource("SuccessGreenBrush");
-            TurboSub.Text = $"🚀 {name} mode active";
+            // Update Global Dashboard Card
+            TurboStatusLabel.Text = "ACTIVE";
+            TurboStatusLabel.Foreground = accentBrush;
+            TurboSub.Text = $"🚀 {name} Overrides Enabled";
         }
         catch (Exception ex) { TurboModeStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1189,19 +1276,37 @@ public partial class MainWindow : Window
     private void OnTurboGaming(object s, RoutedEventArgs e) => ActivateTurbo(TurboMode.GamingProfile, "Gaming");
     private void OnTurboWork(object s, RoutedEventArgs e) => ActivateTurbo(TurboMode.WorkProfile, "Work");
     private void OnTurboBattery(object s, RoutedEventArgs e) => ActivateTurbo(TurboMode.BatteryProfile, "Battery");
+    private void OnTurboServer(object s, RoutedEventArgs e) => ActivateTurbo(TurboMode.ServerProfile, "Server");
 
     private async void OnTurboDeactivate(object s, RoutedEventArgs e)
     {
-        ShowLoading("Deactivating Turbo Mode...");
+        ShowLoading("Restoring Normal Operations...");
         try
         {
-            await Task.Run(() => _turboMode.Deactivate());
-            TurboSummaryText.Text = "✅ Turbo Mode deactivated — all services restored";
-            TurboModeStatus.Text = "Turbo Mode is off";
+            var result = await Task.Run(() => _turboMode.Deactivate());
+            
+            // Revert Styling
+            TurboModeContainer.BorderBrush = new SolidColorBrush((Color)System.Windows.Media.ColorConverter.ConvertFromString("#2A3040"));
+            TurboModeContainer.BorderThickness = new Thickness(1);
+            TurboSummaryText.Foreground = (Brush)FindResource("TextPrimaryBrush");
+
+            TurboSummaryText.Text = "SYSTEM RESTORED";
+            TurboModeStatus.Text = "Forcefully suspend non-essential processes, configure CPU affinity, and alter network routing for raw power.";
+            TurboModeStatus.Foreground = (Brush)FindResource("TextSecondaryBrush");
+            
+            TurboActionList.ItemsSource = result.Actions;
+
+            // Manage Toggles
             BtnTurboOff.Visibility = Visibility.Collapsed;
-            TurboStatusLabel.Text = "OFF";
+            BtnTurboGaming.Visibility = Visibility.Visible;
+            BtnTurboWork.Visibility = Visibility.Visible;
+            BtnTurboBattery.Visibility = Visibility.Visible;
+            BtnTurboServer.Visibility = Visibility.Visible;
+
+            // Update Global Dashboard Card
+            TurboStatusLabel.Text = "STANDBY";
             TurboStatusLabel.Foreground = (Brush)FindResource("TextSecondaryBrush");
-            TurboSub.Text = "🚀 Click to activate";
+            TurboSub.Text = "🚀 Ready to Activate";
         }
         catch (Exception ex) { TurboModeStatus.Text = $"Error: {ex.Message}"; }
         finally { HideLoading(); }
@@ -1620,10 +1725,7 @@ public partial class MainWindow : Window
 
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(40, 26, 31, 46)),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 8, 12, 8),
-            Margin = new Thickness(0, 0, 0, 6),
+            Style = (Style)Application.Current.FindResource("ResultCard"),
             Child = new StackPanel
             {
                 Children =
@@ -1668,15 +1770,17 @@ public partial class MainWindow : Window
 
         var dock = new DockPanel();
         DockPanel.SetDock(actionBtn, Dock.Right);
+        
+        // Use premium OutlineButton style for result actions
+        actionBtn.Style = (Style)Application.Current.FindResource("OutlineButton");
+        actionBtn.Margin = new Thickness(16, 0, 0, 0);
+
         dock.Children.Add(actionBtn);
         dock.Children.Add(textPanel);
 
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(40, 26, 31, 46)),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 8, 12, 8),
-            Margin = new Thickness(0, 0, 0, 6),
+            Style = (Style)Application.Current.FindResource("ResultCard"),
             Child = dock
         };
     }

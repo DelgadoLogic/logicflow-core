@@ -1,0 +1,17 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+  OmniCore.Engine -> C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\OmniCore.Engine\bin\Debug\net8.0\OmniCore.Engine.dll
+  LogicFlow.Registry -> C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.Registry\bin\Debug\net8.0-windows\LogicFlow.Registry.dll
+C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\Commands\SecurityCommands.cs(29,33): error CS0234: The type or namespace name 'LocalMachine' does not exist in the namespace 'LogicFlow.Registry' (are you missing an assembly reference?) [C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\LogicFlow.CLI.csproj]
+C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\Commands\AppCommands.cs(41,33): error CS0234: The type or namespace name 'CurrentUser' does not exist in the namespace 'LogicFlow.Registry' (are you missing an assembly reference?) [C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\LogicFlow.CLI.csproj]
+C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\Commands\AppCommands.cs(42,33): error CS0234: The type or namespace name 'LocalMachine' does not exist in the namespace 'LogicFlow.Registry' (are you missing an assembly reference?) [C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\LogicFlow.CLI.csproj]
+
+Build FAILED.
+
+C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\Commands\SecurityCommands.cs(29,33): error CS0234: The type or namespace name 'LocalMachine' does not exist in the namespace 'LogicFlow.Registry' (are you missing an assembly reference?) [C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\LogicFlow.CLI.csproj]
+C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\Commands\AppCommands.cs(41,33): error CS0234: The type or namespace name 'CurrentUser' does not exist in the namespace 'LogicFlow.Registry' (are you missing an assembly reference?) [C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\LogicFlow.CLI.csproj]
+C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\Commands\AppCommands.cs(42,33): error CS0234: The type or namespace name 'LocalMachine' does not exist in the namespace 'LogicFlow.Registry' (are you missing an assembly reference?) [C:\Users\Manuel A Delgado\Desktop\DelgadoLogic\Products\LogicFlow\src\LogicFlow.CLI\LogicFlow.CLI.csproj]
+    0 Warning(s)
+    3 Error(s)
+
+Time Elapsed 00:00:01.87

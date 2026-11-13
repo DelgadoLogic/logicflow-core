@@ -1,5 +1,5 @@
 using System.Windows;
-using LogicFlow.Pulse;
+using OmniPulse;
 
 namespace LogicFlow.Dashboard;
 
