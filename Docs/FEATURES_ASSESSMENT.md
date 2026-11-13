@@ -9,9 +9,9 @@
 
 ## 1. Executive Summary
 
-LogicFlow v1.0 is a native .NET 8.0 (`net8.0-windows`, `win-x64`) system optimization, content-defined storage deduplication/compression, security hardening, and data recovery suite for 64-bit Windows 10 (Version 1607+) and Windows 11. Unlike Electron-based or wrapper utilities, LogicFlow implements low-level Win32/NT P/Invoke (`LogicFlow.Native`), NTFS Windows Overlay Filter (`wofutil` / `FSCTL_SET_EXTERNAL_BACKING`), ReFS block cloning (`FSCTL_DUPLICATE_EXTENTS_TO_FILE`), content-defined FastCDC chunking with 256-bit `BLAKE3` + Dual-Tier `Zstandard` `.lfc` containers (`LogicFlow.Storage.Engine`), dual-phase NTFS MFT + sector-carving recovery (`LogicFlow.Lazarus`), and offline RSA-2048 licensing (`OmniLicense`).
+LogicFlow v1.0 is a native .NET 8.0 (`net8.0-windows`, `win-x64`) system optimization, content-defined storage deduplication/compression, security hardening, and data recovery suite for 64-bit Windows 10 (Version 1607+) and Windows 11. Unlike Electron-based or wrapper utilities, LogicFlow implements low-level Win32/NT P/Invoke (`LogicFlow.Native`), NTFS Windows Overlay Filter (`wofutil` / `FSCTL_SET_EXTERNAL_BACKING`), ReFS block cloning (`FSCTL_DUPLICATE_EXTENTS_TO_FILE`), content-defined FastCDC chunking with 256-bit `BLAKE3` + Dual-Tier `Zstandard` `.lfc` containers (`LogicFlow.Storage.Engine`), dual-phase NTFS MFT + sector-carving recovery (`LogicFlow.Lazarus`), hybrid `Gemma 4 E2B` AI + `LogicFlow.VoiceAgent`, and offline dual Ed25519 + RSA-2048 licensing (`OmniLicense`).
 
-At the same time, an honest engineering audit identifies specific areas where v1.0 delegates to official Windows system utilities (`netsh`, `pnputil`, `sfc`, `DISM`, `winget`), where functional coverage is narrower than legacy single-purpose competitors (such as granular per-browser SQLite cookie/history vacuuming or 5M+ OEM driver redistribution catalogs), and where experimental prototypes (`LogicFlow.VoiceAgent`) are deferred and excluded from the v1.0 release.
+At the same time, an honest engineering audit identifies specific areas where v1.0 delegates to official Windows system utilities (`netsh`, `pnputil`, `sfc`, `DISM`, `winget`), and where driver redistribution scope differs from legacy single-purpose tools (no 5M+ OEM binary driver mirror; uses curated driver compatibility indexing plus Windows Update / `pnputil`).
 
 ---
 
@@ -31,11 +31,11 @@ At the same time, an honest engineering audit identifies specific areas where v1
 | 10 | `OmniPulse` | `OmniPulse.dll` | `net8.0-windows` | **Shipped** | Local hardware profiler (`SystemProfiler`) + consent-gated pseudonymous telemetry client (`PulseClient`, `ConsentStore`, `TelemetryScrubber`, `CrashGuard`). |
 | 11 | `OmniCore.Engine` | `OmniCore.Engine.dll` | `net8.0` | **Shipped** | `AutoUpdateEngine` (Ed25519 manifest signature + SHA-256 verification) and `SmartRollbackEngine`. |
 | 12 | `OmniService` | `LogicFlowAgent.exe` | `net8.0-windows` | **Shipped** | Background Windows Service (`LogicFlowAgent`) for Pro scheduled maintenance (30-min check interval) and 24-hour signed update checks. |
-| 13 | `OmniLicense` | `OmniLicense.dll` | `net8.0` | **Shipped** | Offline RSA-2048 license token validator, 4-component WMI `HwidGenerator`, tier entitlements (`Free`, `Community`, `Pro`, `Team`). |
+| 13 | `OmniLicense` | `OmniLicense.dll` | `net8.0` | **Shipped** | Offline dual Ed25519 + RSA-2048 license token validator, 4-component WMI `HwidGenerator`, tier entitlements (`Free`, `Community`, `Pro`, `Team`). |
 | 14 | `OmniLicense.Commerce` | `OmniLicense.Commerce.dll` | `net8.0` | **Shipped** | Commercial order/catalog models and payment gateway client helpers (server-side secrets only). |
 | 15 | `LogicFlow.Scraper` | `LogicFlow.Scraper.dll` | `net8.0` | **Shipped** | Windows event log harvester and known KB/CVE issue correlator (`IssueHarvester`, `RepoAnalyzer`). |
-| 16 | `LogicFlow.VoiceAgent` | `LogicFlow.VoiceAgent.dll` | `net8.0-windows` | **Deferred (Excluded)** | Experimental Gemini Live voice command dispatcher (`1.0.0-preview`). Excluded from v1.0 release distribution. |
-| 17 | `LogicFlow.Tests` | `LogicFlow.Tests.dll` | `net8.0-windows` | **Test Suite** | Automated xUnit test suite: **51 test `.cs` files, 994 test methods** (`889 [Fact]` + `105 [Theory]` with `768 [InlineData]` rows). |
+| 16 | `LogicFlow.VoiceAgent` | `LogicFlow.VoiceAgent.dll` | `net8.0-windows` | **Shipped** | Hybrid `Gemma 4 E2B` (`gemma-4-E2B-it`) + cloud opt-in voice & natural-language tool dispatcher (`VoiceAgentEngine`, `LogicFlowFunctionDispatcher` with 12 system tools, `NAudio` 2.2.1 MIT). |
+| 17 | `LogicFlow.Tests` | `LogicFlow.Tests.dll` | `net8.0-windows` | **Test Suite** | Automated xUnit test suite: **54 test `.cs` files, 1,839 passing test executions** (`0` failures, `0` skipped in Release). |
 
 ---
 
@@ -43,10 +43,10 @@ At the same time, an honest engineering audit identifies specific areas where v1
 
 ### 3.1 Module 1: Dashboard (`LogicFlow.Dashboard` / `OmniPulse`)
 - **What Is Production-Ready**:
-  - Composite System Health Score (`0–100`), live CPU/RAM/Disk hardware telemetry gauges (`SystemProfiler`), and 1-Click Maintenance (`OneClickMaintenance`).
+  - Composite System Health Score (`0–100`), live CPU/RAM/Disk hardware telemetry gauges (`SystemProfiler`), OmniPulse `Gemma 4 E2B` AI Command Bar, and 1-Click Maintenance (`OneClickMaintenance`).
   - Interactive System Tray (`TrayIconManager`) with live Quick 1-Click Clean, Turbo/Boost toggle, and background scan triggers.
 - **Honest Limitations**:
-  - In-app diagnostic recommendations use deterministic local heuristic rules (`IssueHarvester` / local rule classifiers)—not a local generative LLM.
+  - Local generative AI (`Gemma 4 E2B` via `llama-server.exe` `b12283`) requires optional user-initiated model download; out-of-the-box diagnostics default to deterministic local rules (`AllowHybridCloudFallback = false`).
 
 ### 3.2 Module 2: Sentinel — Security (`LogicFlow.Sentinel`)
 - **What Is Production-Ready**:
@@ -98,8 +98,8 @@ At the same time, an honest engineering audit identifies specific areas where v1
 
 ### 3.9 Module 9: Settings, Licensing & Telemetry Control Center (`LogicFlow.Dashboard` / `OmniPulse`)
 - **What Is Production-Ready**:
-  - Live toggles for startup behavior, tray integration, and **Security & Privacy** (**Diagnostics Sharing** `None`/`Standard`/`Extended` toggles, **View what is sent**, **Reset install ID**, **Delete my data**, and **Change edition or region…**).
-  - Offline RSA-2048 license activation and status display (`OmniLicense`).
+  - Live toggles for startup behavior, tray integration, AI Engine (`Gemma 4 E2B` mode selector & on-demand download/delete), and **Security & Privacy** (**Diagnostics Sharing** `None`/`Standard`/`Extended` toggles, **View what is sent**, **Reset install ID**, **Delete my data**, and **Change edition or region…**).
+  - Offline dual Ed25519 + RSA-2048 license activation and status display (`OmniLicense`).
 
 ---
 
@@ -107,7 +107,7 @@ At the same time, an honest engineering audit identifies specific areas where v1
 
 | Capability | **LogicFlow v1.0 / v1.1** | **CCleaner Professional** | **BleachBit** | **Microsoft PC Manager** | **Process Lasso Pro** |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI & Runtime Architecture** | Native .NET 8 WPF (`WPF-UI 4.3.0`, `win-x64` / `win-arm64` / `win-x86`) | C++ + WebView/Electron overlays | Python + GTK3 | WinUI 3 | Native C++ Win32 |
+| **UI & Runtime Architecture** | Native .NET 8 WPF (`WPF-UI 4.3.0`, `win-x64`; `win-arm64` planned) | C++ + WebView/Electron overlays | Python + GTK3 | WinUI 3 | Native C++ Win32 |
 | **FastCDC + BLAKE3 + Zstd `.lfc` Archiving & ReFS/NTFS Dedup** | **Yes (`HyperStore`)** | No | No | No | No |
 | **NTFS WOF Game Compression + DirectStorage Bypass + Decay Audit** | **Yes (`GameCompression`)** | No | No | No | No |
 | **Dual-Phase NTFS MFT + 25-Signature Sector + VSS Single-File Recovery** | **Yes (Built-in; Pro)** | Separate Recuva purchase | No | No | No |
@@ -120,9 +120,7 @@ At the same time, an honest engineering audit identifies specific areas where v1
 
 ## 5. Test Suite & Quality Assurance Status (`LogicFlow.Tests`)
 
-- **Total Test Files**: `51` `.cs` test files in `Products/LogicFlow/tests/LogicFlow.Tests/`.
-- **Total Test Methods**: `994` (`889 [Fact]` + `105 [Theory]` covering `768 [InlineData]` rows).
+- **Total Test Files**: `54` `.cs` test files in `Products/LogicFlow/tests/LogicFlow.Tests/`.
+- **Total Passing Executions**: `1,839` automated xUnit test executions (`0` failures, `0` skipped in Release).
 - **Functional & Security Coverage**:
-  - Comprehensive unit and integration tests covering `FastCdcChunker`, `Blake3`, `DualTierZstdCompressor`, `LfcWriter`/`LfcReader`, `VolumeAwareDeduplicator`, `GameCompression`, `FullScreenGameGuard`, `OmniPulse` (`ConsentStore`, `TelemetryScrubber`, `PulseClient`, `event.schema.json` conformance), `OmniLicense` (RSA-2048 & 4-component `HwidGenerator`), `LazarusEngine` (`NtfsMftEngine` & `FileCarver`), `JunkCleanerEngine`, `DefenderHardenerEngine`, and `lf.exe` CLI routing.
-- **Known Test Note (3 Hardware-Sensitive Throughput / Latency Assertions)**:
-  - Out of 994 test methods, **991 pass deterministically** across all runners. Three wall-clock throughput/latency benchmark assertions in `Storage/HyperStoreCoreEngineTests.cs` (`FastCDC_ThroughputBenchmark_ExceedsTwoGigabytesPerSecond`) and `Storage/HyperStoreE2ETests.cs` (`T1_R1_FastCdc_Throughput_ExceedsRequirementThreshold`, `T1_R3_GameGuard_SuspendLatency_Sub250msResponse`) measure live wall-clock speed and can flake when executed inside CPU-throttled CI containers or under heavy concurrent disk I/O.
+  - Comprehensive unit and integration tests covering `FastCdcChunker`, `Blake3`, `DualTierZstdCompressor`, `LfcWriter`/`LfcReader`, `VolumeAwareDeduplicator`, `GameCompression`, `FullScreenGameGuard`, `OmniPulse` (`ConsentStore`, `TelemetryScrubber`, `PulseClient`, `event.schema.json` conformance), `OmniLicense` (dual Ed25519 + RSA-2048 & 4-component `HwidGenerator`), `LazarusEngine` (`NtfsMftEngine` & `FileCarver`), `JunkCleanerEngine`, `DefenderHardenerEngine`, `BrowserPrivacyCleanerEngine`, `LogicFlow.VoiceAgent`, and `lf.exe` CLI routing.

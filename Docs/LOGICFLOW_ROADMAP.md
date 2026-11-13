@@ -25,12 +25,10 @@
 
 ---
 
-## 2. v1.1 Milestone — Deep Storage GUI, ARM64 & Browser SQLite Engine (Q4 2026 / Q1 2027)
+## 2. v1.1 Milestone — Deep Storage GUI & ARM64 (Q4 2026 / Q1 2027)
 
 - [ ] **WPF GUI `.lfc` Archive Explorer**:
   - Integrate `LogicFlow.Storage.Engine` `.lfc` container browsing and single-file extraction directly into the HyperStore and Toolbox desktop views (complementing `lf store pack|unpack`).
-- [ ] **Granular Browser SQLite Cleaner**:
-  - Add safe, closed-browser SQLite `VACUUM` and domain-allowlisted cookie/history/session pruning for Chrome, Edge, Brave, Firefox, and Opera profiles.
 - [ ] **`win-arm64` Native Build Target**:
   - Publish native `win-arm64` self-contained builds for Snapdragon X Elite / Windows on ARM laptops alongside `win-x64`.
 - [ ] **Merchant of Record (MoR) Global Tax Automation**:
@@ -38,9 +36,7 @@
 
 ---
 
-## 3. v1.2 Milestone — Enterprise Fleet Profiles & Accessibility (Q2 2027)
+## 3. v1.2 Milestone — Enterprise Fleet Profiles (Q2 2027)
 
 - [ ] **Team 10-Pack / Enterprise Fleet Policy Export**:
   - Allow IT administrators using the **Team 10-Pack ($149)** to export/import signed JSON optimization and Defender ASR hardening profiles across machines via `lf.exe --profile <file.json>`.
-- [ ] **Opt-In Beta Evaluation of `LogicFlow.VoiceAgent`**:
-  - Evaluate re-introducing the deferred `LogicFlow.VoiceAgent` module as an explicit opt-in accessibility plugin once production reliability and privacy guardrails are validated.
