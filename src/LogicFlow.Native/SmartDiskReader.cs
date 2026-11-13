@@ -122,7 +122,8 @@ public sealed class SmartDiskReader
 
                 // Calculate overall health
                 report.HealthScore = CalculateHealthScore(report.Attributes);
-                report.Status = report.HealthScore >= 80 ? DiskHealthStatus.Healthy :
+                report.Status = report.HealthScore < 0 ? DiskHealthStatus.Unknown :
+                               report.HealthScore >= 80 ? DiskHealthStatus.Healthy :
                                report.HealthScore >= 50 ? DiskHealthStatus.Warning :
                                DiskHealthStatus.Critical;
 
@@ -168,8 +169,8 @@ public sealed class SmartDiskReader
                         {
                             InstanceName = $"PhysicalDrive{driveNum}",
                             DriveLetter = "",
-                            HealthScore = 100, // SMART supported, basic report
-                            Status = DiskHealthStatus.Healthy,
+                            HealthScore = -1, // SMART supported, attributes not yet parsed
+                            Status = DiskHealthStatus.Unknown,
                         });
                     }
                 }
@@ -236,7 +237,7 @@ public sealed class SmartDiskReader
 
     private static int CalculateHealthScore(List<SmartAttribute> attributes)
     {
-        if (attributes.Count == 0) return 100;
+        if (attributes.Count == 0) return -1;
         int score = 100;
         foreach (var attr in attributes.Where(a => a.IsCritical))
         {

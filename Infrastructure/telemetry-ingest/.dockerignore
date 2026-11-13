@@ -1,0 +1,12 @@
+node_modules
+.data
+test
+scripts
+tools
+deploy
+bigquery
+*.md
+.git
+.gitignore
+Dockerfile
+.dockerignore

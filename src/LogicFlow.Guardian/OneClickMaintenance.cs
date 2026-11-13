@@ -33,6 +33,9 @@ public sealed class OneClickMaintenance
         public long JunkBytesCleaned { get; set; }
         public int JunkFilesCleaned { get; set; }
 
+        // Memory Optimizer
+        public long MemoryFreedBytes { get; set; }
+
         // Registry (from LogicFlow.Registry)
         public int RegistryIssuesFound { get; set; }
         public int RegistryIssuesFixed { get; set; }
@@ -132,66 +135,132 @@ public sealed class OneClickMaintenance
     public MaintenanceReport Run(
         JunkCleanerEngine? junkCleaner = null,
         WindowsTweakEngine? tweakEngine = null,
-        SystemInfoEngine? systemInfo = null)
+        SystemInfoEngine? systemInfo = null,
+        bool cleanJunk = true,
+        bool checkRegistry = true,
+        bool optimizeStartup = true,
+        bool applyTweaks = true,
+        MemoryOptimizer? memoryOptimizer = null,
+        bool optimizeMemory = true,
+        Func<int>? registryIssueScanner = null)
     {
         var report = new MaintenanceReport { StartedAt = DateTimeOffset.UtcNow };
 
-        _logger?.LogInformation("═══ 1-Click Maintenance Starting ═══");
+        _logger?.LogInformation("═══ 1-Click Maintenance Starting (Junk={Junk}, Reg={Reg}, Startup={Startup}, Tweaks={Tweaks}, Mem={Mem}) ═══",
+            cleanJunk, checkRegistry, optimizeStartup, applyTweaks, optimizeMemory);
 
         // Step 1: Junk Cleanup
-        try
+        if (cleanJunk)
         {
-            var cleaner = junkCleaner ?? new JunkCleanerEngine();
-            var cleanResult = cleaner.QuickClean();
-            report.JunkBytesCleaned = cleanResult.BytesCleaned;
-            report.JunkFilesCleaned = cleanResult.FilesDeleted;
-            report.Actions.Add($"🧹 Cleaned {cleanResult.FilesDeleted} junk files ({cleanResult.BytesCleanedFormatted})");
+            try
+            {
+                var cleaner = junkCleaner ?? new JunkCleanerEngine();
+                var cleanResult = cleaner.QuickClean();
+                report.JunkBytesCleaned = cleanResult.BytesCleaned;
+                report.JunkFilesCleaned = cleanResult.FilesDeleted;
+                report.Actions.Add($"🧹 Cleaned {cleanResult.FilesDeleted} junk files ({cleanResult.BytesCleanedFormatted})");
 
-            if (cleanResult.FilesFailed > 0)
-                report.Warnings.Add($"{cleanResult.FilesFailed} files were locked (in use by another process)");
+                if (cleanResult.FilesFailed > 0)
+                    report.Warnings.Add($"{cleanResult.FilesFailed} files were locked (in use by another process)");
+            }
+            catch (Exception ex)
+            {
+                report.Warnings.Add($"Junk cleanup partially failed: {ex.Message}");
+                _logger?.LogWarning(ex, "Junk cleanup error");
+            }
         }
-        catch (Exception ex)
+        else
         {
-            report.Warnings.Add($"Junk cleanup partially failed: {ex.Message}");
-            _logger?.LogWarning(ex, "Junk cleanup error");
-        }
-
-        // Step 2: Startup Analysis
-        try
-        {
-            var startup = new StartupOptimizer(null!);
-            var items = startup.AnalyzeStartupItems();
-            report.StartupItemsFound = items.Count;
-            report.HighImpactStartupItems = items.Count(i => i.ImpactScore >= 7);
-            report.Actions.Add($"🚀 Analyzed {items.Count} startup items ({report.HighImpactStartupItems} high-impact)");
-        }
-        catch (Exception ex)
-        {
-            report.Warnings.Add($"Startup analysis failed: {ex.Message}");
+            report.Actions.Add("⏭ Junk file cleanup skipped (unchecked)");
         }
 
-        // Step 3: Apply Safe Tweaks
-        try
+        // Step 2: Registry Check (only report validation when an actual registry scanner ran)
+        if (checkRegistry && registryIssueScanner != null)
         {
-            var engine = tweakEngine ?? new WindowsTweakEngine();
-            var safeTweaks = engine.AllTweaks.Where(t => t.Safety == SafetyLevel.Safe).ToList();
-            report.TweaksAlreadyApplied = safeTweaks.Count(t => t.IsApplied);
-
-            var results = engine.ApplyAllSafe();
-            report.SafeTweaksApplied = results.Count(r => r.Success);
-            report.RequiresReboot = engine.AllTweaks.Any(t => t.IsApplied && t.RequiresReboot);
-
-            if (report.SafeTweaksApplied > 0)
-                report.Actions.Add($"⚡ Applied {report.SafeTweaksApplied} safe Windows optimizations");
-            else
-                report.Actions.Add($"✅ All {report.TweaksAlreadyApplied} safe optimizations already active");
+            try
+            {
+                int issues = Math.Max(0, registryIssueScanner());
+                report.RegistryIssuesFound = issues;
+                report.Actions.Add(issues == 0
+                    ? "🔧 Registry scanned — 0 orphaned issues detected"
+                    : $"🔧 Registry scanned — {issues} issue(s) flagged for review");
+            }
+            catch (Exception ex)
+            {
+                report.Warnings.Add($"Registry scan failed: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        else if (!checkRegistry)
         {
-            report.Warnings.Add($"Tweak application failed: {ex.Message}");
+            report.Actions.Add("⏭ Registry check skipped (unchecked)");
         }
 
-        // Step 4: Calculate health scores
+        // Step 2b: Memory Working-Set & Standby Optimization
+        if (optimizeMemory)
+        {
+            try
+            {
+                var memOpt = memoryOptimizer ?? new MemoryOptimizer();
+                var memResult = memOpt.Optimize();
+                report.MemoryFreedBytes = Math.Max(0, memResult.TotalMemoryFreedBytes);
+                report.Actions.Add($"💾 Optimized RAM working sets ({memResult.ProcessesOptimized} processes, {memResult.MemoryFreedFormatted} reclaimed)");
+            }
+            catch (Exception ex)
+            {
+                report.Warnings.Add($"Memory optimization partially failed: {ex.Message}");
+            }
+        }
+
+        // Step 3: Startup Analysis
+        if (optimizeStartup)
+        {
+            try
+            {
+                var startup = new StartupOptimizer(null!);
+                var items = startup.AnalyzeStartupItems();
+                report.StartupItemsFound = items.Count;
+                report.HighImpactStartupItems = items.Count(i => i.ImpactScore >= 7);
+                report.Actions.Add($"🚀 Analyzed {items.Count} startup items ({report.HighImpactStartupItems} high-impact)");
+            }
+            catch (Exception ex)
+            {
+                report.Warnings.Add($"Startup analysis failed: {ex.Message}");
+            }
+        }
+        else
+        {
+            report.Actions.Add("⏭ Startup optimization skipped (unchecked)");
+        }
+
+        // Step 4: Apply Safe Tweaks
+        if (applyTweaks)
+        {
+            try
+            {
+                var engine = tweakEngine ?? new WindowsTweakEngine();
+                var safeTweaks = engine.AllTweaks.Where(t => t.Safety == SafetyLevel.Safe).ToList();
+                report.TweaksAlreadyApplied = safeTweaks.Count(t => t.IsApplied);
+
+                var results = engine.ApplyAllSafe();
+                report.SafeTweaksApplied = results.Count(r => r.Success);
+                report.RequiresReboot = engine.AllTweaks.Any(t => t.IsApplied && t.RequiresReboot);
+
+                if (report.SafeTweaksApplied > 0)
+                    report.Actions.Add($"⚡ Applied {report.SafeTweaksApplied} safe Windows optimizations");
+                else
+                    report.Actions.Add($"✅ All {report.TweaksAlreadyApplied} safe optimizations already active");
+            }
+            catch (Exception ex)
+            {
+                report.Warnings.Add($"Tweak application failed: {ex.Message}");
+            }
+        }
+        else
+        {
+            report.Actions.Add("⏭ Safe Windows optimizations skipped (unchecked)");
+        }
+
+        // Step 5: Calculate health scores
         try
         {
             var sysInfo = systemInfo ?? new SystemInfoEngine();

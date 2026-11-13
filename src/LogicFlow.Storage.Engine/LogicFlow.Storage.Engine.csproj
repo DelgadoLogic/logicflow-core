@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows;net8.0</TargetFrameworks>
+    <RootNamespace>LogicFlow.Storage.Engine</RootNamespace>
+    <AssemblyName>LogicFlow.Storage.Engine</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>LogicFlow HyperStore (V-Dense) Storage Engine — FastCDC, BLAKE3 SIMD, MinHash, Dual-Tier Zstd, .lfc format</Description>
+    <Company>Delgado Creative Enterprises LLC d/b/a DelgadoLogic</Company>
+    <Product>LogicFlow</Product>
+    <Version>1.0.0</Version>
+    <Copyright>Copyright (c) 2026 Delgado Creative Enterprises LLC d/b/a DelgadoLogic. All rights reserved.</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blake3" Version="3.0.2" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>LogicFlow.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

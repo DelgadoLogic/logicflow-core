@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.delgadologic.tech/v1/telemetry/schema/event.v1.json",
+  "title": "LogicFlow telemetry event envelope (schema v1)",
+  "description": "Versioned envelope for every telemetry event. Unknown properties are STRIPPED server-side (never stored). Server-owned fields (receivedAt, consent, fingerprint, ingestId, dt) can never be set by clients.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "eventId", "type", "ts", "installId", "appVersion", "osBuild", "arch", "tier", "region", "payload"],
+  "properties": {
+    "schema": { "const": 1, "description": "Envelope schema version. Always 1 for this document." },
+    "eventId": { "type": "string", "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$", "description": "UUID (v4 or v7). Used for dedupe." },
+    "type": { "enum": ["crash", "error", "usage", "scan", "baseline"] },
+    "ts": { "type": "string", "format": "date-time", "description": "Client timestamp (UTC, RFC 3339). Informational only; must be within 30 days past / 24 h future." },
+    "installId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,64}$", "description": "Pseudonymous random install identifier. Rotates on consent change / every 90 days." },
+    "appVersion": { "type": "string", "pattern": "^[0-9]{1,5}\\.[0-9]{1,5}\\.[0-9]{1,5}(\\.[0-9]{1,5})?([-+][0-9A-Za-z.-]{1,24})?$" },
+    "osBuild": { "type": "string", "pattern": "^[0-9A-Za-z .()_+-]{1,64}$", "description": "e.g. 10.0.26100.1742" },
+    "arch": { "enum": ["x64", "arm64", "x86"] },
+    "tier": { "enum": ["free", "community", "pro"], "description": "'free' never sends telemetry; the server rejects it." },
+    "region": { "type": "string", "pattern": "^([A-Z]{2}|unknown)$", "description": "ISO 3166-1 alpha-2 country from OS regional settings, or 'unknown'." },
+    "payload": { "type": "object" }
+  },
+  "$defs": {
+    "str16": { "type": "string", "maxLength": 16 },
+    "str32": { "type": "string", "maxLength": 32 },
+    "str64": { "type": "string", "maxLength": 64 },
+    "str128": { "type": "string", "maxLength": 128 },
+    "str300": { "type": "string", "maxLength": 300 },
+    "msg": { "type": "string", "maxLength": 1000 },
+    "hresult": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{1,8}$" },
+    "frames": { "type": "array", "maxItems": 64, "items": { "type": "string", "maxLength": 300 } },
+    "uint": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "kv": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["k", "v"],
+        "properties": { "k": { "type": "string", "maxLength": 32 }, "v": { "type": "string", "maxLength": 64 } }
+      }
+    },
+
+    "payload.crash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exceptionType", "frames"],
+      "properties": {
+        "exceptionType": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "message": { "$ref": "#/$defs/msg" },
+        "hresult": { "$ref": "#/$defs/hresult" },
+        "frames": { "$ref": "#/$defs/frames" },
+        "inner": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["exceptionType"],
+            "properties": { "exceptionType": { "type": "string", "maxLength": 200 }, "message": { "$ref": "#/$defs/msg" } }
+          }
+        },
+        "component": { "$ref": "#/$defs/str64" },
+        "isFatal": { "type": "boolean" },
+        "uptimeSec": { "$ref": "#/$defs/uint" }
+      }
+    },
+    "payload.error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "component"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "component": { "$ref": "#/$defs/str64" },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "message": { "$ref": "#/$defs/msg" },
+        "hresult": { "$ref": "#/$defs/hresult" },
+        "frames": { "$ref": "#/$defs/frames" }
+      }
+    },
+    "payload.usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature", "action"],
+      "properties": {
+        "feature": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "action": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "durationMs": { "$ref": "#/$defs/uint" },
+        "count": { "$ref": "#/$defs/uint" },
+        "props": { "$ref": "#/$defs/kv" }
+      }
+    },
+    "payload.scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scanType"],
+      "properties": {
+        "scanType": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "durationMs": { "$ref": "#/$defs/uint" },
+        "itemsFound": { "$ref": "#/$defs/uint" },
+        "bytesReclaimable": { "$ref": "#/$defs/uint" },
+        "healthScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "modulesRun": { "type": "array", "maxItems": 64, "items": { "type": "string", "maxLength": 64 } },
+        "issues": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id"],
+            "properties": { "id": { "type": "string", "maxLength": 64 }, "count": { "$ref": "#/$defs/uint" } }
+          }
+        }
+      }
+    },
+    "payload.baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "windows": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "edition": { "$ref": "#/$defs/str64" }, "displayVersion": { "$ref": "#/$defs/str32" }, "ubr": { "$ref": "#/$defs/uint" } }
+        },
+        "hardware": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpuName": { "$ref": "#/$defs/str128" },
+            "cpuCores": { "$ref": "#/$defs/uint" },
+            "ramGb": { "type": "number", "minimum": 0, "maximum": 100000 },
+            "gpus": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "vendor": { "$ref": "#/$defs/str64" },
+                  "name": { "$ref": "#/$defs/str128" },
+                  "driverVersion": { "$ref": "#/$defs/str64" },
+                  "driverDate": { "$ref": "#/$defs/str32" }
+                }
+              }
+            },
+            "biosVendor": { "$ref": "#/$defs/str64" },
+            "biosVersion": { "$ref": "#/$defs/str64" },
+            "boardVendor": { "$ref": "#/$defs/str64" },
+            "boardModel": { "$ref": "#/$defs/str64" },
+            "diskTypes": { "type": "array", "maxItems": 8, "items": { "enum": ["nvme", "ssd", "hdd", "usb", "other"] } }
+          }
+        },
+        "drivers": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "class": { "$ref": "#/$defs/str32" },
+              "vendor": { "$ref": "#/$defs/str64" },
+              "name": { "$ref": "#/$defs/str128" },
+              "version": { "$ref": "#/$defs/str64" },
+              "date": { "$ref": "#/$defs/str32" },
+              "hwidClass": { "$ref": "#/$defs/str64" }
+            }
+          }
+        },
+        "kbs": { "type": "array", "maxItems": 500, "items": { "type": "string", "pattern": "^KB[0-9]{6,8}$" } },
+        "securityProducts": { "type": "array", "maxItems": 16, "items": { "type": "string", "maxLength": 64 } },
+        "servicesRunning": { "$ref": "#/$defs/uint" }
+      }
+    }
+  }
+}

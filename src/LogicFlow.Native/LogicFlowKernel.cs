@@ -123,7 +123,7 @@ public static class DiskIO
 
 /// <summary>
 /// CNG (Cryptography Next Generation) interop for hardware-accelerated crypto.
-/// Used by LogicFlow.Licensing for RSA validation and LogicFlow.Lazarus for file hashing.
+/// Used by OmniLicense for RSA validation and LogicFlow.Lazarus for file hashing.
 /// </summary>
 public static class CryptoNative
 {
@@ -257,4 +257,36 @@ public struct DRIVERSTATUS
     public byte[] bReserved;
     [MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
     public uint[] dwReserved;
+}
+
+/// <summary>
+/// Native process execution control: NtSuspendProcess, NtResumeProcess, and priority management.
+/// </summary>
+public static class ProcessControl
+{
+    [DllImport("ntdll.dll", SetLastError = true)]
+    public static extern int NtSuspendProcess(IntPtr processHandle);
+
+    [DllImport("ntdll.dll", SetLastError = true)]
+    public static extern int NtResumeProcess(IntPtr processHandle);
+
+    public static bool Suspend(int processId)
+    {
+        try
+        {
+            var p = System.Diagnostics.Process.GetProcessById(processId);
+            return NtSuspendProcess(p.Handle) >= 0;
+        }
+        catch { return false; }
+    }
+
+    public static bool Resume(int processId)
+    {
+        try
+        {
+            var p = System.Diagnostics.Process.GetProcessById(processId);
+            return NtResumeProcess(p.Handle) >= 0;
+        }
+        catch { return false; }
+    }
 }

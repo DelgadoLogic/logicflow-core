@@ -91,6 +91,29 @@ public sealed class MemoryOptimizer
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool CloseHandle(IntPtr hObject);
 
+    [DllImport("psapi.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetPerformanceInfo(out PERFORMANCE_INFORMATION pPerformanceInformation, uint cb);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PERFORMANCE_INFORMATION
+    {
+        public uint cb;
+        public UIntPtr CommitTotal;
+        public UIntPtr CommitLimit;
+        public UIntPtr CommitPeak;
+        public UIntPtr PhysicalTotal;
+        public UIntPtr PhysicalAvailable;
+        public UIntPtr SystemCache;
+        public UIntPtr KernelTotal;
+        public UIntPtr KernelPaged;
+        public UIntPtr KernelNonpaged;
+        public UIntPtr PageSize;
+        public uint HandleCount;
+        public uint ProcessCount;
+        public uint ThreadCount;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  Constants
     // ═══════════════════════════════════════════════════════════════════════
@@ -201,6 +224,28 @@ public sealed class MemoryOptimizer
         public string PageFileTotalFormatted => FormatBytes(TotalPageFileBytes);
     }
 
+    public sealed class MemoryBreakdown
+    {
+        public long TotalPhysicalBytes { get; init; }
+        public long InUseBytes { get; init; }
+        public long StandbyCacheBytes { get; init; }
+        public long FreeBytes { get; init; }
+        public long CommittedBytes { get; init; }
+        public long CommitLimitBytes { get; init; }
+
+        public double InUsePercent => TotalPhysicalBytes > 0 ? Math.Round((double)InUseBytes / TotalPhysicalBytes * 100, 1) : 0;
+        public double StandbyPercent => TotalPhysicalBytes > 0 ? Math.Round((double)StandbyCacheBytes / TotalPhysicalBytes * 100, 1) : 0;
+        public double FreePercent => TotalPhysicalBytes > 0 ? Math.Round((double)FreeBytes / TotalPhysicalBytes * 100, 1) : 0;
+        public double CommitPercent => CommitLimitBytes > 0 ? Math.Round((double)CommittedBytes / CommitLimitBytes * 100, 1) : 0;
+
+        public string TotalFormatted => FormatBytes(TotalPhysicalBytes);
+        public string InUseFormatted => FormatBytes(InUseBytes);
+        public string StandbyFormatted => FormatBytes(StandbyCacheBytes);
+        public string FreeFormatted => FormatBytes(FreeBytes);
+        public string CommittedFormatted => FormatBytes(CommittedBytes);
+        public string CommitLimitFormatted => FormatBytes(CommitLimitBytes);
+    }
+
     public sealed class ProcessMemoryInfo
     {
         public int Pid { get; init; }
@@ -249,6 +294,74 @@ public sealed class MemoryOptimizer
             TotalPageFileBytes = (long)mem.ullTotalPageFile,
             AvailablePageFileBytes = (long)mem.ullAvailPageFile
         };
+    }
+
+    /// <summary>
+    /// Gets detailed breakdown of physical RAM (In-Use vs Standby Cache vs Free) and Commit Charge.
+    /// Uses native psapi GetPerformanceInfo for microsecond precision.
+    /// </summary>
+    public MemoryBreakdown GetMemoryBreakdown()
+    {
+        try
+        {
+            var perf = new PERFORMANCE_INFORMATION { cb = (uint)Marshal.SizeOf<PERFORMANCE_INFORMATION>() };
+            if (GetPerformanceInfo(out perf, perf.cb))
+            {
+                long pageSize = (long)perf.PageSize.ToUInt64();
+                long totalPhys = (long)perf.PhysicalTotal.ToUInt64() * pageSize;
+                long availPhys = (long)perf.PhysicalAvailable.ToUInt64() * pageSize;
+                long cacheBytes = (long)perf.SystemCache.ToUInt64() * pageSize;
+                long inUseBytes = Math.Max(0, totalPhys - availPhys);
+                long freeBytes = Math.Max(0, availPhys - cacheBytes);
+                long commitBytes = (long)perf.CommitTotal.ToUInt64() * pageSize;
+                long commitLimit = (long)perf.CommitLimit.ToUInt64() * pageSize;
+
+                return new MemoryBreakdown
+                {
+                    TotalPhysicalBytes = totalPhys,
+                    InUseBytes = inUseBytes,
+                    StandbyCacheBytes = cacheBytes,
+                    FreeBytes = freeBytes,
+                    CommittedBytes = commitBytes,
+                    CommitLimitBytes = commitLimit
+                };
+            }
+        }
+        catch { }
+
+        // Fallback using GlobalMemoryStatusEx
+        var stats = GetStats();
+        return new MemoryBreakdown
+        {
+            TotalPhysicalBytes = stats.TotalPhysicalBytes,
+            InUseBytes = stats.UsedPhysicalBytes,
+            StandbyCacheBytes = 0,
+            FreeBytes = stats.AvailablePhysicalBytes,
+            CommittedBytes = stats.UsedPageFileBytes,
+            CommitLimitBytes = stats.TotalPageFileBytes
+        };
+    }
+
+    /// <summary>
+    /// Flushes the Standby List directly using NtSetSystemInformation (SystemMemoryListInformation).
+    /// Requires SeProfileSingleProcessPrivilege (Admin).
+    /// </summary>
+    public bool FlushStandbyList()
+    {
+        if (!IsRunningAsAdmin()) return false;
+        try
+        {
+            EnablePrivilege(SE_PROFILE_SINGLE_PROCESS_NAME);
+            EnablePrivilege(SE_INCREASE_QUOTA_NAME);
+            bool cleared = ClearMemoryArea(MemoryPurgeStandbyList, "Standby List");
+            ClearMemoryArea(MemoryPurgeLowPriorityStandbyList, "Low-Priority Standby");
+            return cleared;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to flush standby list");
+            return false;
+        }
     }
 
     /// <summary>

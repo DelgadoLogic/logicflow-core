@@ -1,13 +1,31 @@
-# Owners for critical LogicFlow paths
-# All changes to these paths require owner review
+# DelgadoLogic — LogicFlow v1.0 Code Owners
+# Global Fallback
+* @Chronolapse411
 
-# Sovereign update + licensing infrastructure
-/src/LogicFlow.Licensing/        @Chronolapse411
-/src/LogicFlow.Commerce/         @Chronolapse411
+# User Interfaces, CLI & Windows Background Service
+/src/LogicFlow.Dashboard/ @Chronolapse411
+/src/LogicFlow.CLI/ @Chronolapse411
+/src/OmniService/ @Chronolapse411
 
-# Guardian + Native system components
-/src/LogicFlow.Guardian/         @Chronolapse411
-/src/LogicFlow.Native/           @Chronolapse411
+# Core Optimization, Security, Storage, Recovery & Registry Engines
+/src/LogicFlow.Guardian/ @Chronolapse411
+/src/LogicFlow.Sentinel/ @Chronolapse411
+/src/LogicFlow.Storage.Engine/ @Chronolapse411
+/src/LogicFlow.Lazarus/ @Chronolapse411
+/src/LogicFlow.Registry/ @Chronolapse411
+/src/LogicFlow.Native/ @Chronolapse411
 
-# CI pipeline
-/.github/workflows/              @Chronolapse411
+# Foundation, Telemetry, Auto-Update & Licensing
+/src/DelgadoLogic.Core/ @Chronolapse411
+/src/OmniPulse/ @Chronolapse411
+/src/OmniCore.Engine/ @Chronolapse411
+/src/OmniLicense/ @Chronolapse411
+/src/OmniLicense.Commerce/ @Chronolapse411
+/src/LogicFlow.Scraper/ @Chronolapse411
+/src/LogicFlow.VoiceAgent/ @Chronolapse411
+
+# Infrastructure, Installer, Documentation & Automated Test Suite
+/Infrastructure/ @Chronolapse411
+/Installer/ @Chronolapse411
+/Docs/ @Chronolapse411
+/tests/ @Chronolapse411

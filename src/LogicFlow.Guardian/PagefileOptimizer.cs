@@ -74,9 +74,11 @@ public sealed class PagefileOptimizer
     {
         public string DriveLetter { get; init; } = "";
         public bool IsSsd { get; init; }
+        public bool IsExternal { get; init; }
+        public string BusType { get; init; } = "Internal";
         public long FreeSpaceGB { get; init; }
         public long TotalSpaceGB { get; init; }
-        public string MediaType { get; init; } = ""; // "SSD", "HDD", "Unknown"
+        public string MediaType { get; init; } = ""; // "SSD", "HDD", "USB-SSD", "USB-HDD", "Unknown"
         public bool IsSystemDrive { get; init; }
     }
 
@@ -146,11 +148,12 @@ public sealed class PagefileOptimizer
         var warnings = new List<string>();
         var recommendations = new List<string>();
 
-        // ── Calculate recommended size ──
-        var (recInitial, recMax, rationale) = CalculateOptimalSize(ramMB, commitCharge, commitLimit);
+        // ── Find best drive first so sizing algorithm is aware of disk headroom ──
+        var bestDriveAnalysis = SelectOptimalDrive(drives);
+        var bestDrive = bestDriveAnalysis?.DriveLetter ?? "C";
 
-        // ── Find best drive ──
-        var bestDrive = FindBestDrive(drives);
+        // ── Calculate recommended size safely ──
+        var (recInitial, recMax, rationale) = CalculateOptimalSize(ramMB, commitCharge, commitLimit, bestDriveAnalysis);
 
         // ── Health checks ──
         var status = HealthStatus.Optimal;
@@ -158,7 +161,7 @@ public sealed class PagefileOptimizer
         // 1. No pagefile?
         if (pagefiles.Count == 0 && !isSystemManaged)
         {
-            warnings.Add("⚠️ No pagefile configured — system may crash under memory pressure");
+            warnings.Add("⚠️ No pagefile configured — system may crash under memory pressure.");
             status = HealthStatus.Critical;
         }
 
@@ -166,58 +169,75 @@ public sealed class PagefileOptimizer
         var commitPercent = commitLimit > 0 ? (double)commitCharge / commitLimit * 100 : 0;
         if (commitPercent > 90)
         {
-            warnings.Add($"🔴 Commit charge at {commitPercent:F0}% — system may freeze or crash");
+            warnings.Add($"🔴 Commit charge at {commitPercent:F0}% — virtual memory exhausted, system may freeze or crash.");
             status = HealthStatus.Critical;
         }
         else if (commitPercent > 80)
         {
-            warnings.Add($"🟡 Commit charge at {commitPercent:F0}% — running low on virtual memory");
+            warnings.Add($"🟡 Commit charge at {commitPercent:F0}% — running low on virtual memory headroom.");
             if (status < HealthStatus.NeedsAttention) status = HealthStatus.NeedsAttention;
         }
 
-        // 3. Pagefile on HDD when SSD available?
-        if (pagefiles.Count > 0 && drives.Any(d => d.IsSsd))
+        // 3. External USB drive hosting pagefile?
+        foreach (var pf in pagefiles)
+        {
+            var pfDrive = drives.FirstOrDefault(d => d.DriveLetter.Equals(pf.DriveLetter, StringComparison.OrdinalIgnoreCase));
+            if (pfDrive != null && (pfDrive.IsExternal || string.Equals(pfDrive.BusType, "USB", StringComparison.OrdinalIgnoreCase)))
+            {
+                warnings.Add($"⚠️ Paging file is located on external USB drive ({pf.DriveLetter}:). This creates system crash risks (KERNEL_DATA_INPAGE_ERROR) if disconnected or suspended, and prevents Windows kernel crash dumps. Move to internal system drive.");
+                if (status < HealthStatus.NeedsAttention) status = HealthStatus.NeedsAttention;
+            }
+        }
+
+        // 4. Pagefile on HDD when internal SSD available?
+        if (pagefiles.Count > 0 && drives.Any(d => d.IsSsd && !d.IsExternal))
         {
             var currentDrive = pagefiles[0].DriveLetter.ToUpper();
             var currentDriveInfo = drives.FirstOrDefault(d => d.DriveLetter.Equals(currentDrive, StringComparison.OrdinalIgnoreCase));
-            if (currentDriveInfo != null && !currentDriveInfo.IsSsd)
+            if (currentDriveInfo != null && !currentDriveInfo.IsSsd && !currentDriveInfo.IsExternal)
             {
-                var ssdDrive = drives.FirstOrDefault(d => d.IsSsd && d.FreeSpaceGB > recMax / 1024 + 5);
+                var ssdDrive = drives.FirstOrDefault(d => d.IsSsd && !d.IsExternal && d.FreeSpaceGB > recMax / 1024 + 5);
                 if (ssdDrive != null)
                 {
-                    recommendations.Add($"Move pagefile from HDD ({currentDrive}:) to SSD ({ssdDrive.DriveLetter}:) for 5-10× faster paging");
+                    recommendations.Add($"Move pagefile from mechanical HDD ({currentDrive}:) to internal SSD ({ssdDrive.DriveLetter}:) for 5-10× faster paging.");
                     if (status < HealthStatus.NeedsAttention) status = HealthStatus.NeedsAttention;
                 }
             }
         }
 
-        // 4. Pagefile too small?
+        // 5. System drive headroom check
+        if (bestDriveAnalysis != null && bestDriveAnalysis.FreeSpaceGB < 30)
+        {
+            warnings.Add($"Drive {bestDrive}: has limited free space ({bestDriveAnalysis.FreeSpaceGB} GB). Pagefile size is conservatively capped to prevent drive exhaustion.");
+        }
+
+        // 6. Pagefile too small?
         var currentMax = pagefiles.Sum(p => p.MaximumSizeMB);
         if (currentMax > 0 && currentMax < recInitial * 0.5)
         {
-            warnings.Add($"Pagefile ({currentMax:N0} MB) is less than half the recommended size ({recInitial:N0} MB)");
+            warnings.Add($"Pagefile ({currentMax:N0} MB) is less than half the recommended size ({recInitial:N0} MB).");
             if (status < HealthStatus.NeedsAttention) status = HealthStatus.NeedsAttention;
         }
 
-        // 5. Pagefile too large? (wasting SSD space)
+        // 7. Pagefile too large? (wasting SSD space)
         if (currentMax > recMax * 2 && currentMax > 0)
         {
-            recommendations.Add($"Pagefile ({currentMax:N0} MB) is more than 2× recommended — consider reducing to save disk space");
+            recommendations.Add($"Pagefile ({currentMax:N0} MB) is more than 2× recommended — consider reducing to recover valuable SSD storage.");
             if (status < HealthStatus.Acceptable) status = HealthStatus.Acceptable;
         }
 
-        // 6. System managed — usually fine but not optimal
-        if (isSystemManaged && ramMB < 16384)
+        // 8. System managed on mechanical HDD
+        if (isSystemManaged && ramMB < 16384 && bestDriveAnalysis != null && !bestDriveAnalysis.IsSsd)
         {
-            recommendations.Add("System-managed pagefile can fragment on HDD. Consider setting a fixed size for better performance.");
+            recommendations.Add("System-managed pagefile can fragment on mechanical hard drives. A fixed size prevents fragmentation.");
         }
 
-        // 7. Multiple pagefiles? Usually wastes space unless on different physical drives
+        // 9. Multiple pagefiles on the same drive?
         if (pagefiles.Count > 1)
         {
             var uniqueDrives = pagefiles.Select(p => p.DriveLetter).Distinct().Count();
             if (uniqueDrives < pagefiles.Count)
-                recommendations.Add("Multiple pagefiles on the same drive provides no benefit — consolidate to one");
+                recommendations.Add("Multiple pagefiles on the same drive provide no benefit — consolidate to one.");
         }
 
         return new PagefileAnalysis
@@ -340,69 +360,103 @@ public sealed class PagefileOptimizer
     // ═══════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Calculates optimal pagefile size based on RAM, commit charge, and crash dump needs.
+    /// Calculates optimal pagefile size based on RAM, commit charge, and target drive free space.
+    /// Strictly guarantees disk space safety: never allocates >40-50% of free space on any drive.
     /// </summary>
-    private (long initialMB, long maxMB, string rationale) CalculateOptimalSize(
-        long ramMB, long commitChargeMB, long commitLimitMB)
+    public static (long initialMB, long maxMB, string rationale) CalculateOptimalSize(
+        long ramMB, long commitChargeMB, long commitLimitMB, DriveAnalysis? targetDrive = null)
     {
-        long initialMB, maxMB;
-        string rationale;
+        long ramGB = Math.Max(1, ramMB / 1024);
+        string driveLetter = targetDrive?.DriveLetter ?? "C";
+        long freeSpaceGB = targetDrive?.FreeSpaceGB ?? 50;
+        long targetFreeMB = freeSpaceGB * 1024;
 
-        // Crash dump requirement: kernel dump needs approximately RAM/3
-        long crashDumpMinMB = ramMB / 3;
+        long initialMB;
+        long maxMB;
+        string baseRationale;
 
-        if (ramMB <= 4096) // ≤4GB RAM — needs aggressive paging
+        // Base sizing according to RAM capacity
+        if (ramMB <= 4096) // <=4GB RAM — aggressive paging needed
         {
-            initialMB = (long)(ramMB * 2.0);
-            maxMB = (long)(ramMB * 3.0);
-            rationale = $"Low RAM ({ramMB / 1024}GB): 2× initial, 3× max for aggressive paging";
+            initialMB = (long)(ramMB * 1.5);
+            maxMB = (long)(ramMB * 2.5);
+            baseRationale = $"Low-capacity RAM ({ramGB} GB): Dynamic paging (1.5×–2.5×) ensures stability under heavy application workloads.";
         }
         else if (ramMB <= 8192) // 4-8GB RAM
         {
-            initialMB = (long)(ramMB * 1.5);
-            maxMB = (long)(ramMB * 2.0);
-            rationale = $"Moderate RAM ({ramMB / 1024}GB): 1.5× initial, 2× max";
+            initialMB = (long)(ramMB * 1.0);
+            maxMB = (long)(ramMB * 1.5);
+            baseRationale = $"Moderate-capacity RAM ({ramGB} GB): Balanced paging (1.0×–1.5×) prevents out-of-memory errors during multitasking.";
         }
         else if (ramMB <= 16384) // 8-16GB RAM
         {
-            initialMB = ramMB; // 1:1
-            maxMB = (long)(ramMB * 1.5);
-            rationale = $"Good RAM ({ramMB / 1024}GB): 1× initial, 1.5× max";
+            initialMB = Math.Max(4096, ramMB / 2);
+            maxMB = ramMB;
+            baseRationale = $"Standard RAM ({ramGB} GB): Moderate paging (0.5×–1.0×) accommodates gaming and background spikes while preserving disk space.";
         }
         else if (ramMB <= 32768) // 16-32GB RAM
         {
-            initialMB = ramMB / 2; // 0.5×
-            maxMB = ramMB; // 1×
-            rationale = $"Ample RAM ({ramMB / 1024}GB): 0.5× initial, 1× max";
+            initialMB = Math.Max(4096, ramMB / 4);
+            maxMB = Math.Max(8192, ramMB / 2);
+            baseRationale = $"High RAM ({ramGB} GB): Ample physical memory handles most tasks; conservative paging supports background worker pages and crash dumps.";
         }
-        else // >32GB RAM
+        else // >32GB RAM (e.g. 48GB, 64GB, 128GB)
         {
-            initialMB = Math.Max(8192, ramMB / 4); // 0.25× but at least 8GB
-            maxMB = Math.Max(16384, ramMB / 2); // 0.5× but at least 16GB
-            rationale = $"High RAM ({ramMB / 1024}GB): 0.25× initial, 0.5× max (diminishing returns)";
+            // For systems with >32GB RAM, general applications almost never page out.
+            // Sizing only needs ~8GB - 16GB to guarantee complete Windows kernel crash-dump (BSOD) diagnostic capture.
+            initialMB = 8192;
+            maxMB = 16384;
+            baseRationale = $"High-capacity RAM ({ramGB} GB): Your physical memory easily handles heavy multitasking and gaming without needing disk paging. Sized to 8–16 GB to reserve crash-dump headroom so Windows can save kernel diagnostic data during unexpected BSOD stops.";
         }
 
-        // Ensure crash dump requirement is met
-        if (initialMB < crashDumpMinMB)
-        {
-            initialMB = crashDumpMinMB;
-            rationale += $" [adjusted: crash dump needs {crashDumpMinMB:N0} MB min]";
-        }
-
-        // Factor in actual commit charge — if commit is high, increase max
+        // Factor in actual commit charge headroom if active commit is high
         if (commitChargeMB > 0 && commitLimitMB > 0)
         {
-            var peakNeedMB = (long)(commitChargeMB * 1.3); // 30% headroom over current
+            var peakNeedMB = (long)(commitChargeMB * 1.25);
             if (maxMB < peakNeedMB - ramMB)
             {
-                maxMB = peakNeedMB - ramMB;
-                rationale += $" [adjusted: commit charge needs {peakNeedMB:N0} MB total]";
+                maxMB = Math.Max(maxMB, peakNeedMB - ramMB);
             }
         }
 
-        // Hard limits: min 2GB, max 64GB
-        initialMB = Math.Clamp(initialMB, 2048, 65536);
-        maxMB = Math.Clamp(maxMB, initialMB, 65536);
+        // ── DISK SPACE SAFETY CAP ──
+        // Critical safety rule: Never recommend a pagefile exceeding 40-50% (capping strictly at 45%) of available free space on the target drive
+        long safeMaxCapMB = (long)(targetFreeMB * 0.45);
+
+        bool spaceCapped = false;
+        if (maxMB > safeMaxCapMB)
+        {
+            maxMB = safeMaxCapMB;
+            spaceCapped = true;
+        }
+
+        if (initialMB > maxMB)
+        {
+            initialMB = Math.Max(256, maxMB / 2);
+        }
+
+        // Hard bounds: enforce standard minimums if space permits, but NEVER exceed safeMaxCapMB
+        if (safeMaxCapMB >= 1024)
+        {
+            initialMB = Math.Clamp(initialMB, 1024, 65536);
+            maxMB = Math.Clamp(maxMB, initialMB, 65536);
+        }
+        else
+        {
+            // Highly space-constrained disk (< 2.2 GB free)
+            maxMB = Math.Max(256, safeMaxCapMB);
+            initialMB = Math.Clamp(initialMB, 256, maxMB);
+        }
+
+        string rationale = baseRationale;
+        if (spaceCapped)
+        {
+            rationale += $" (Conservatively capped to {maxMB:N0} MB [{Math.Round(maxMB / 1024.0, 1)} GB] to safeguard drive {driveLetter}: free space [{freeSpaceGB} GB available]).";
+        }
+        else
+        {
+            rationale += $" (Safely within 45% free space threshold on drive {driveLetter}: [{freeSpaceGB} GB available]).";
+        }
 
         return (initialMB, maxMB, rationale);
     }
@@ -411,16 +465,56 @@ public sealed class PagefileOptimizer
     //  Internal — Drive Analysis
     // ═══════════════════════════════════════════════════════════════════════
 
-    private string FindBestDrive(List<DriveAnalysis> drives)
+    public string FindBestDrive(List<DriveAnalysis> drives)
     {
-        // Priority: SSD with most free space > fastest drive > system drive
-        var ssdDrives = drives.Where(d => d.IsSsd && d.FreeSpaceGB > 10).OrderByDescending(d => d.FreeSpaceGB);
-        if (ssdDrives.Any())
-            return ssdDrives.First().DriveLetter;
+        return SelectOptimalDrive(drives)?.DriveLetter ?? "C";
+    }
 
-        // No SSD with space — fall back to drive with most free space
-        var bestDrive = drives.Where(d => d.FreeSpaceGB > 10).OrderByDescending(d => d.FreeSpaceGB).FirstOrDefault();
-        return bestDrive?.DriveLetter ?? "C";
+    public static DriveAnalysis? SelectOptimalDrive(List<DriveAnalysis> drives)
+    {
+        if (drives == null || drives.Count == 0) return null;
+
+        var systemDrive = drives.FirstOrDefault(d => d.IsSystemDrive);
+
+        // Filter valid candidates: must NOT be external/USB and must have at least 5 GB free space
+        var candidates = drives
+            .Where(d => !d.IsExternal && !string.Equals(d.BusType, "USB", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // Check if an internal secondary SSD with ample space (>=30 GB) is available
+        var internalSecondarySsd = candidates
+            .Where(d => !d.IsSystemDrive && d.IsSsd && d.FreeSpaceGB >= 30)
+            .OrderByDescending(d => d.FreeSpaceGB)
+            .FirstOrDefault();
+
+        // 1. If system drive is an internal SSD with ample headroom (>= 30 GB free), prefer it
+        // (Windows crash dump engine crashdmp.sys requires pagefile on boot/system drive)
+        if (systemDrive != null && !systemDrive.IsExternal && systemDrive.IsSsd && systemDrive.FreeSpaceGB >= 30)
+        {
+            return systemDrive;
+        }
+
+        // 2. If system drive has limited space (<30 GB free) or is HDD, and an internal secondary SSD with ample space (>=30 GB) is available
+        if (internalSecondarySsd != null && (systemDrive == null || systemDrive.FreeSpaceGB < 30 || !systemDrive.IsSsd))
+        {
+            return internalSecondarySsd;
+        }
+
+        // 3. Fallback to system drive if internal and >= 5 GB free
+        if (systemDrive != null && !systemDrive.IsExternal && systemDrive.FreeSpaceGB >= 5)
+        {
+            return systemDrive;
+        }
+
+        // 4. Candidate internal drive with most free space
+        var fallbackInternal = candidates.OrderByDescending(d => d.FreeSpaceGB).FirstOrDefault();
+        if (fallbackInternal != null && fallbackInternal.FreeSpaceGB >= 5)
+        {
+            return fallbackInternal;
+        }
+
+        // 5. Ultimate fallback to system drive or first drive
+        return systemDrive ?? drives.FirstOrDefault();
     }
 
     private List<DriveAnalysis> AnalyzeDrives()
@@ -432,18 +526,29 @@ public sealed class PagefileOptimizer
         {
             foreach (var di in DriveInfo.GetDrives())
             {
-                if (di.DriveType != DriveType.Fixed || !di.IsReady) continue;
+                if ((di.DriveType != DriveType.Fixed && di.DriveType != DriveType.Removable) || !di.IsReady) continue;
 
                 var letter = di.Name.TrimEnd('\\')[..1];
-                var isSsd = DetectSsd(letter);
+                var (isSsd, isExternal, busType) = DetectDriveAttributes(letter);
+                if (di.DriveType == DriveType.Removable)
+                {
+                    isExternal = true;
+                    busType = "USB";
+                }
+
+                string mediaType = isSsd
+                    ? (isExternal ? "USB-SSD" : "SSD")
+                    : (isExternal ? "USB-HDD" : "HDD");
 
                 drives.Add(new DriveAnalysis
                 {
                     DriveLetter = letter,
                     IsSsd = isSsd,
+                    IsExternal = isExternal,
+                    BusType = busType,
                     FreeSpaceGB = di.TotalFreeSpace / (1024 * 1024 * 1024),
                     TotalSpaceGB = di.TotalSize / (1024 * 1024 * 1024),
-                    MediaType = isSsd ? "SSD" : "HDD",
+                    MediaType = mediaType,
                     IsSystemDrive = letter.Equals(systemDrive, StringComparison.OrdinalIgnoreCase)
                 });
             }
@@ -456,14 +561,19 @@ public sealed class PagefileOptimizer
         return drives;
     }
 
-    private bool DetectSsd(string driveLetter)
+    private (bool isSsd, bool isExternal, string busType) DetectDriveAttributes(string driveLetter)
     {
+        bool isSsd = false;
+        bool isExternal = false;
+        string busType = "Internal";
+
         try
         {
-            // Method 1: Win32_DiskDrive MediaType
+            // Method 1: Win32_LogicalDisk to Win32_DiskDrive mapping
             using var partSearcher = new ManagementObjectSearcher(
                 $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}:'}} " +
                 "WHERE AssocClass=Win32_LogicalDiskToPartition");
+
             foreach (var part in partSearcher.Get())
             {
                 var diskQuery = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{part["DeviceID"]}'}} " +
@@ -472,26 +582,71 @@ public sealed class PagefileOptimizer
                 foreach (var disk in diskSearcher.Get())
                 {
                     var mediaType = disk["MediaType"]?.ToString() ?? "";
+                    var interfaceType = disk["InterfaceType"]?.ToString() ?? "";
+                    var model = disk["Model"]?.ToString() ?? "";
+                    var pnpId = disk["PNPDeviceID"]?.ToString() ?? "";
+
+                    if (interfaceType.Equals("USB", StringComparison.OrdinalIgnoreCase) ||
+                        mediaType.Contains("External", StringComparison.OrdinalIgnoreCase) ||
+                        mediaType.Contains("Removable", StringComparison.OrdinalIgnoreCase) ||
+                        pnpId.StartsWith("USBSTOR", StringComparison.OrdinalIgnoreCase))
+                    {
+                        isExternal = true;
+                        busType = "USB";
+                    }
+
                     if (mediaType.Contains("SSD", StringComparison.OrdinalIgnoreCase) ||
-                        mediaType.Contains("Solid", StringComparison.OrdinalIgnoreCase))
-                        return true;
+                        mediaType.Contains("Solid", StringComparison.OrdinalIgnoreCase) ||
+                        model.Contains("SSD", StringComparison.OrdinalIgnoreCase) ||
+                        model.Contains("NVMe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        isSsd = true;
+                    }
+
+                    // Query specific physical disk in MSFT_PhysicalDisk by DeviceId matching disk Index
+                    var index = disk["Index"]?.ToString();
+                    if (!string.IsNullOrEmpty(index))
+                    {
+                        try
+                        {
+                            using var physSearcher = new ManagementObjectSearcher(
+                                @"root\microsoft\windows\storage",
+                                $"SELECT MediaType, BusType FROM MSFT_PhysicalDisk WHERE DeviceId='{index}'");
+                            foreach (var phys in physSearcher.Get())
+                            {
+                                var mType = phys["MediaType"]?.ToString();
+                                if (mType == "4") isSsd = true; // 4 = SSD, 3 = HDD
+                                else if (mType == "3" && !model.Contains("SSD", StringComparison.OrdinalIgnoreCase) && !mediaType.Contains("SSD", StringComparison.OrdinalIgnoreCase)) isSsd = false;
+
+                                var bType = phys["BusType"]?.ToString();
+                                if (bType == "7") // 7 = USB
+                                {
+                                    isExternal = true;
+                                    busType = "USB";
+                                }
+                                else if (bType == "17")
+                                {
+                                    busType = "NVMe";
+                                }
+                                else if (bType == "11")
+                                {
+                                    busType = "SATA";
+                                }
+                            }
+                        }
+                        catch { /* Storage WMI namespace fallback */ }
+                    }
                 }
             }
-
-            // Method 2: MSFT_PhysicalDisk (more reliable on Win10+)
-            using var physSearcher = new ManagementObjectSearcher(
-                @"root\microsoft\windows\storage",
-                "SELECT MediaType FROM MSFT_PhysicalDisk");
-            foreach (var disk in physSearcher.Get())
-            {
-                // MediaType: 3=HDD, 4=SSD, 5=SCM
-                var type = disk["MediaType"]?.ToString();
-                if (type == "4") return true;
-            }
         }
-        catch { /* Fallback: assume HDD */ }
+        catch { /* Fallback */ }
 
-        return false;
+        return (isSsd, isExternal, busType);
+    }
+
+    private bool DetectSsd(string driveLetter)
+    {
+        return DetectDriveAttributes(driveLetter).isSsd;
     }
 
     // ═══════════════════════════════════════════════════════════════════════

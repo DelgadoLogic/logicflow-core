@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ==========================================================================
+       TURBO MODE VARIABLE OVERRIDES (Orange / High Performance Red)
+       ========================================================================== -->
+    <!-- Base Colors (Darker Navy/Charcoal, base hue shifted to 240) -->
+    <Color x:Key="ColorBgBase">#FF06060B</Color>              <!-- hsl(240, 28%, 3.5%) -->
+    <Color x:Key="ColorBgSidebar">#A60F0F1A</Color>           <!-- hsla(240, 28%, 8%, 0.65) -->
+    <Color x:Key="ColorBgCard">#800F0F1A</Color>              <!-- hsla(240, 28%, 8%, 0.5) -->
+    <Color x:Key="ColorBgCardHover">#99161627</Color>         <!-- hsla(240, 28%, 12%, 0.6) -->
+    <Color x:Key="ColorBgTerminal">#D907070E</Color>          <!-- hsla(240, 35%, 4%, 0.85) -->
+
+    <!-- Accents & Glows (Hue 15: Neon Orange/Red & Hue 345: Pinkish Highlight) -->
+    <Color x:Key="ColorAccent">#FFFF4000</Color>              <!-- hsl(15, 100%, 50%) - High Performance Orange -->
+    <Color x:Key="ColorAccentGlow">#26FF4000</Color>          <!-- hsla(15, 100%, 50%, 0.15) -->
+    <Color x:Key="ColorAccentBorder">#40FF4000</Color>        <!-- hsla(15, 100%, 50%, 0.25) -->
+    <Color x:Key="ColorHighlight">#FFFF3366</Color>           <!-- hsl(345, 100%, 60%) - Hot Pink/Red -->
+
+    <!-- Borders (Tinted Orange) -->
+    <Color x:Key="ColorBorder">#1FFF3C00</Color>              <!-- rgba(255, 60, 0, 0.12) -->
+    <Color x:Key="ColorBorderHover">#3DFF3C00</Color>         <!-- rgba(255, 60, 0, 0.24) -->
+
+    <!-- ==========================================================================
+       BRUSHES (TURBO MODE OVERRIDES)
+       ========================================================================== -->
+    <SolidColorBrush x:Key="BrushBgBase" Color="{StaticResource ColorBgBase}"/>
+    <SolidColorBrush x:Key="BrushBgSidebar" Color="{StaticResource ColorBgSidebar}"/>
+    <SolidColorBrush x:Key="BrushBgCard" Color="{StaticResource ColorBgCard}"/>
+    <SolidColorBrush x:Key="BrushBgCardHover" Color="{StaticResource ColorBgCardHover}"/>
+    <SolidColorBrush x:Key="BrushBgTerminal" Color="{StaticResource ColorBgTerminal}"/>
+
+    <SolidColorBrush x:Key="BrushAccent" Color="{StaticResource ColorAccent}"/>
+    <SolidColorBrush x:Key="BrushAccentGlow" Color="{StaticResource ColorAccentGlow}"/>
+    <SolidColorBrush x:Key="BrushAccentBorder" Color="{StaticResource ColorAccentBorder}"/>
+    <SolidColorBrush x:Key="BrushHighlight" Color="{StaticResource ColorHighlight}"/>
+
+    <SolidColorBrush x:Key="BrushBorder" Color="{StaticResource ColorBorder}"/>
+    <SolidColorBrush x:Key="BrushBorderHover" Color="{StaticResource ColorBorderHover}"/>
+
+    <!-- Gradients -->
+    <LinearGradientBrush x:Key="BrushLogoGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource ColorAccent}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource ColorHighlight}" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="BrushProgressGradient" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="{StaticResource ColorAccent}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource ColorHighlight}" Offset="1.0"/>
+    </LinearGradientBrush>
+
+    <!-- Radial Window Mesh (Orange-Red Tint) -->
+    <RadialGradientBrush x:Key="BrushBackgroundMesh" Center="0.1,0.2" RadiusX="0.45" RadiusY="0.45">
+        <GradientStop Color="#0AFF4000" Offset="0.0"/>
+        <GradientStop Color="Transparent" Offset="1.0"/>
+    </RadialGradientBrush>
+
+    <!-- ==========================================================================
+       SHADOW OVERRIDES
+       ========================================================================== -->
+    <!-- shadow-accent (Turbo): 0 0 28px 0 hsla(15, 100%, 50%, 0.22) -->
+    <DropShadowEffect x:Key="ShadowAccent" BlurRadius="28" ShadowDepth="0" Color="{StaticResource ColorAccent}" Opacity="0.22"/>
+    
+    <DropShadowEffect x:Key="ShadowButtonPrimary" BlurRadius="16" ShadowDepth="4" Direction="270" Color="{StaticResource ColorAccent}" Opacity="0.30"/>
+    <DropShadowEffect x:Key="ShadowButtonPrimaryHover" BlurRadius="20" ShadowDepth="6" Direction="270" Color="{StaticResource ColorAccent}" Opacity="0.40"/>
+
+</ResourceDictionary>

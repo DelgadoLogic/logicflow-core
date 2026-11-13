@@ -22,7 +22,7 @@ public sealed class RegistryAnalyzer
     /// <summary>
     /// Critical registry paths that should never be modified.
     /// </summary>
-    private static readonly HashSet<string> ProtectedPaths = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly HashSet<string> ProtectedPaths = new(StringComparer.OrdinalIgnoreCase)
     {
         @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet",
         @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion",
@@ -32,6 +32,50 @@ public sealed class RegistryAnalyzer
         @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing",
         @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography",
     };
+
+    public static bool IsProtectedPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return true;
+        var normalized = path.Replace('/', '\\').Trim().TrimEnd('\\');
+
+        foreach (var protectedPath in ProtectedPaths)
+        {
+            if (normalized.Equals(protectedPath, StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith(protectedPath + "\\", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        var protectedRoots = new[]
+        {
+            @"HKEY_LOCAL_MACHINE\SOFTWARE",
+            @"HKEY_LOCAL_MACHINE\SYSTEM",
+            @"HKEY_CURRENT_USER\Software",
+            @"HKEY_CLASSES_ROOT\CLSID",
+            @"HKEY_CLASSES_ROOT\TypeLib",
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+            @"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+            @"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths",
+            @"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths",
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\SharedDLLs"
+        };
+
+        foreach (var root in protectedRoots)
+        {
+            if (normalized.Equals(root, StringComparison.OrdinalIgnoreCase))
+                return true;
+            var shortRoot = root.Replace("HKEY_LOCAL_MACHINE", "HKLM").Replace("HKEY_CURRENT_USER", "HKCU").Replace("HKEY_CLASSES_ROOT", "HKCR");
+            if (normalized.Equals(shortRoot, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
 
     public RegistryAnalyzer(ILogger<RegistryAnalyzer> logger)
     {
@@ -122,17 +166,21 @@ public sealed class RegistryAnalyzer
                     var installLocation = subKey.GetValue("InstallLocation")?.ToString();
                     var displayName = subKey.GetValue("DisplayName")?.ToString() ?? subKeyName;
 
-                    if (!string.IsNullOrEmpty(installLocation) && !Directory.Exists(installLocation))
+                    if (!string.IsNullOrWhiteSpace(installLocation))
                     {
-                        issues.Add(new RegistryIssue
+                        var expanded = Environment.ExpandEnvironmentVariables(installLocation).Trim().Trim('"', '\'');
+                        if (!string.IsNullOrWhiteSpace(expanded) && expanded.Contains('\\') && !Directory.Exists(expanded) && !File.Exists(expanded))
                         {
-                            Path = $@"{hiveLabel}\{uninstallPath}\{subKeyName}",
-                            FullRegistryPath = $@"{(hive == Microsoft.Win32.Registry.LocalMachine ? "HKLM" : "HKCU")}\{uninstallPath}\{subKeyName}",
-                            Type = RegistryIssueType.OrphanedKey,
-                            Description = $"Install path missing for '{displayName}': {installLocation}",
-                            Severity = IssueSeverity.Medium,
-                            IsSafeToFix = true
-                        });
+                            issues.Add(new RegistryIssue
+                            {
+                                Path = $@"{hiveLabel}\{uninstallPath}\{subKeyName}",
+                                FullRegistryPath = $@"{(hive == Microsoft.Win32.Registry.LocalMachine ? "HKEY_LOCAL_MACHINE" : "HKEY_CURRENT_USER")}\{uninstallPath}\{subKeyName}",
+                                Type = RegistryIssueType.OrphanedKey,
+                                Description = $"Install path missing for '{displayName}': {installLocation}",
+                                Severity = IssueSeverity.Medium,
+                                IsSafeToFix = true
+                            });
+                        }
                     }
                 }
                 catch { }
@@ -217,17 +265,21 @@ public sealed class RegistryAnalyzer
                     using var subKey = key.OpenSubKey(subKeyName);
                     var path = subKey?.GetValue("")?.ToString();
 
-                    if (!string.IsNullOrEmpty(path) && path.Contains('\\') && !File.Exists(path))
+                    if (!string.IsNullOrWhiteSpace(path))
                     {
-                        issues.Add(new RegistryIssue
+                        var resolved = ExtractExePath(path);
+                        if (!string.IsNullOrWhiteSpace(resolved) && resolved.Contains('\\') && !File.Exists(resolved) && !Directory.Exists(resolved))
                         {
-                            Path = $@"{label}\{keyPath}\{subKeyName}",
-                            FullRegistryPath = $@"{(hive == Microsoft.Win32.Registry.LocalMachine ? "HKEY_LOCAL_MACHINE" : "HKEY_CURRENT_USER")}\{keyPath}\{subKeyName}",
-                            Type = RegistryIssueType.InvalidPath,
-                            Description = $"App path missing: {path}",
-                            Severity = IssueSeverity.Low,
-                            IsSafeToFix = true
-                        });
+                            issues.Add(new RegistryIssue
+                            {
+                                Path = $@"{label}\{keyPath}\{subKeyName}",
+                                FullRegistryPath = $@"{(hive == Microsoft.Win32.Registry.LocalMachine ? "HKEY_LOCAL_MACHINE" : "HKEY_CURRENT_USER")}\{keyPath}\{subKeyName}",
+                                Type = RegistryIssueType.InvalidPath,
+                                Description = $"App path missing: {resolved}",
+                                Severity = IssueSeverity.Low,
+                                IsSafeToFix = true
+                            });
+                        }
                     }
                 }
             }
@@ -512,16 +564,21 @@ public sealed class RegistryAnalyzer
             {
                 try
                 {
-                    if (!valueName.Contains('\\')) continue;
+                    if (string.IsNullOrWhiteSpace(valueName) || !valueName.Contains('\\')) continue;
 
-                    // MUI cache keys are like "C:\path\app.exe.FriendlyAppName"
+                    // MUI cache keys are like "C:\path\app.exe.FriendlyAppName" or "@C:\path\app.exe,-123"
                     var exePath = valueName;
                     var dotIdx = exePath.LastIndexOf(".FriendlyAppName", StringComparison.OrdinalIgnoreCase);
                     if (dotIdx > 0) exePath = exePath[..dotIdx];
                     dotIdx = exePath.LastIndexOf(".ApplicationCompany", StringComparison.OrdinalIgnoreCase);
                     if (dotIdx > 0) exePath = exePath[..dotIdx];
 
-                    if (exePath.Contains('\\') && !File.Exists(exePath))
+                    if (exePath.StartsWith('@')) exePath = exePath[1..];
+                    var commaIdx = exePath.IndexOf(',');
+                    if (commaIdx > 0) exePath = exePath[..commaIdx];
+
+                    var resolved = ExtractExePath(exePath);
+                    if (!string.IsNullOrWhiteSpace(resolved) && resolved.Contains('\\') && !File.Exists(resolved) && !Directory.Exists(resolved))
                     {
                         issues.Add(new RegistryIssue
                         {
@@ -529,7 +586,7 @@ public sealed class RegistryAnalyzer
                             FullRegistryPath = $@"HKEY_CURRENT_USER\{muiPath}",
                             ValueName = valueName,
                             Type = RegistryIssueType.MuiCacheOrphan,
-                            Description = $"MUI cache for missing app: {Path.GetFileName(exePath)}",
+                            Description = $"MUI cache for missing app: {Path.GetFileName(resolved)}",
                             Severity = IssueSeverity.Low,
                             IsSafeToFix = true
                         });
@@ -662,7 +719,8 @@ public sealed class RegistryAnalyzer
                                     Type = RegistryIssueType.InstallerOrphan,
                                     Description = $"Installer ref for '{displayName}' → missing source",
                                     Severity = IssueSeverity.Low,
-                                    IsSafeToFix = false // Installer keys are risky
+                                    IsSafeToFix = false, // Installer keys are risky
+                                    IsSelected = false
                                 });
                             }
                         }
@@ -682,20 +740,91 @@ public sealed class RegistryAnalyzer
 
     // ─── Helpers ─────────────────────────────────────────────────────────
 
-    private static string ExtractExePath(string command)
+    public static string ExtractExePath(string command)
     {
-        if (string.IsNullOrEmpty(command)) return "";
+        if (string.IsNullOrWhiteSpace(command)) return "";
+
+        command = Environment.ExpandEnvironmentVariables(command).Trim();
 
         // Handle quoted paths: "C:\Program Files\app.exe" --args
         if (command.StartsWith('"'))
         {
             var endQuote = command.IndexOf('"', 1);
-            return endQuote > 0 ? command[1..endQuote] : "";
+            if (endQuote > 0)
+            {
+                var quoted = command[1..endQuote].Trim();
+                return ResolveSystemExecutable(quoted);
+            }
+            command = command.Trim('"');
         }
 
-        // Handle unquoted paths: C:\app.exe --args
+        // Direct file existence check on full string
+        if (File.Exists(command)) return command;
+
+        // Check for common executable/library extensions
+        string[] exts = [".exe", ".dll", ".ocx", ".cpl", ".scr", ".bat", ".cmd", ".sys"];
+        foreach (var ext in exts)
+        {
+            int idx = command.IndexOf(ext, StringComparison.OrdinalIgnoreCase);
+            while (idx >= 0)
+            {
+                var candidate = command[..(idx + ext.Length)].Trim('"', ' ');
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+                var sysResolved = ResolveSystemExecutable(candidate);
+                if (File.Exists(sysResolved))
+                {
+                    return sysResolved;
+                }
+
+                idx = command.IndexOf(ext, idx + 1, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        // If an extension exists in the string, the first token up to that extension is the intended path
+        foreach (var ext in exts)
+        {
+            int idx = command.IndexOf(ext, StringComparison.OrdinalIgnoreCase);
+            if (idx >= 0)
+            {
+                var candidate = command[..(idx + ext.Length)].Trim('"', ' ');
+                return ResolveSystemExecutable(candidate);
+            }
+        }
+
+        // Fallback for commands without known extension: unquoted token before first space
         var spaceIdx = command.IndexOf(' ');
-        return spaceIdx > 0 ? command[..spaceIdx] : command;
+        var fallback = spaceIdx > 0 ? command[..spaceIdx] : command;
+        return ResolveSystemExecutable(fallback);
+    }
+
+    public static string ResolveSystemExecutable(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "";
+        path = Environment.ExpandEnvironmentVariables(path).Trim().Trim('"', '\'');
+        if (File.Exists(path)) return path;
+
+        // If path has no directory separators, check System32 and Windows directory
+        if (!path.Contains('\\') && !path.Contains('/'))
+        {
+            try
+            {
+                var sysPath = Path.Combine(Environment.SystemDirectory, path);
+                if (File.Exists(sysPath)) return sysPath;
+
+                var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                if (!string.IsNullOrEmpty(winDir))
+                {
+                    var winPath = Path.Combine(winDir, path);
+                    if (File.Exists(winPath)) return winPath;
+                }
+            }
+            catch { }
+        }
+
+        return path;
     }
 }
 
@@ -721,26 +850,40 @@ public sealed class RepairEngine
     /// Repairs a list of registry issues. Creates a backup first.
     /// Returns the number of issues fixed and the backup file path.
     /// </summary>
-    public RepairResult Fix(List<RegistryIssue> issues)
+    public RepairResult Fix(List<RegistryIssue> issues) => Fix(issues, onlySafe: true);
+
+    /// <summary>
+    /// Repairs a list of registry issues with optional safe-only filter. Creates a backup first.
+    /// Returns the number of issues fixed and the backup file path.
+    /// </summary>
+    public RepairResult Fix(List<RegistryIssue> issues, bool onlySafe)
     {
-        var safeIssues = issues.Where(i => i.IsSafeToFix).ToList();
-        if (safeIssues.Count == 0)
+        var targetIssues = onlySafe 
+            ? issues.Where(i => i.IsSafeToFix).ToList()
+            : issues.ToList();
+
+        if (targetIssues.Count == 0)
         {
             return new RepairResult
             {
                 Fixed = 0,
                 Failed = 0,
                 BackupFile = "",
-                Message = "No safe-to-fix issues found."
+                Message = onlySafe ? "No safe-to-fix issues found." : "No repairable issues found."
             };
         }
 
-        // Create backup before any changes
-        var backupFile = CreateBackup($"Pre-fix backup for {safeIssues.Count} issues");
+        // Trigger OmniCore.Engine's Smart Systems Rollback (Services snapshot + 5s buffer)
+        var sysLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<OmniCore.Engine.SmartRollbackEngine>.Instance;
+        var rollbackEngine = new OmniCore.Engine.SmartRollbackEngine(sysLogger, _backupDirectory);
+        rollbackEngine.TakeSnapshotAsync($"Pre-fix snapshot for {targetIssues.Count} registry issues").GetAwaiter().GetResult();
+
+        // Create registry backup before any changes
+        var backupFile = CreateBackup($"Pre-fix backup for {targetIssues.Count} issues");
         int fixed_ = 0, failed = 0;
         var errors = new List<string>();
 
-        foreach (var issue in safeIssues)
+        foreach (var issue in targetIssues)
         {
             try
             {
@@ -760,7 +903,8 @@ public sealed class RepairEngine
                     RegistryIssueType.TypeLibOrphan => DeleteRegistryKey(issue),
                     // For Invalid paths, delete the app path key
                     RegistryIssueType.InvalidPath => DeleteRegistryKey(issue),
-                    // Installer orphans are NOT safe to fix
+                    // For Installer orphans, delete product key
+                    RegistryIssueType.InstallerOrphan => DeleteRegistryKey(issue),
                     _ => false
                 };
 
@@ -808,7 +952,7 @@ public sealed class RepairEngine
         return Fix(filtered);
     }
 
-    private static List<RegistryIssue> GetAllIssues(RegistryScanResult result)
+    public static List<RegistryIssue> GetAllIssues(RegistryScanResult result)
     {
         var all = new List<RegistryIssue>();
         all.AddRange(result.OrphanedSoftwareKeys);
@@ -824,21 +968,41 @@ public sealed class RepairEngine
         return all;
     }
 
+    public static List<RegistryIssue> GetSelectedIssues(RegistryScanResult result)
+    {
+        return GetAllIssues(result).Where(i => i.IsSelected).ToList();
+    }
+
     // ─── Registry Operations ────────────────────────────────────────────
 
     private bool DeleteRegistryKey(RegistryIssue issue)
     {
-        var (hive, subPath) = ParseRegistryPath(issue.FullRegistryPath);
-        if (hive == null || string.IsNullOrEmpty(subPath)) return false;
+        var targetPath = !string.IsNullOrWhiteSpace(issue.FullRegistryPath) ? issue.FullRegistryPath : issue.Path;
+        if (RegistryAnalyzer.IsProtectedPath(targetPath))
+        {
+            _logger.LogWarning("Refusing to delete protected registry path: {Path}", targetPath);
+            return false;
+        }
 
+        var (hive, subPath) = ParseRegistryPath(targetPath);
+        if (hive == null || string.IsNullOrWhiteSpace(subPath)) return false;
+
+        subPath = subPath.Trim().TrimEnd('\\', '/');
         var parentPath = Path.GetDirectoryName(subPath)?.Replace('/', '\\') ?? "";
         var keyName = Path.GetFileName(subPath);
+
+        // Security check: Never delete top-level hive roots or empty subpaths
+        if (string.IsNullOrWhiteSpace(parentPath) || string.IsNullOrWhiteSpace(keyName))
+        {
+            _logger.LogWarning("Refusing to delete root or empty registry key: {Path}", targetPath);
+            return false;
+        }
 
         using var parent = hive.OpenSubKey(parentPath, writable: true);
         if (parent == null) return false;
 
         parent.DeleteSubKeyTree(keyName, throwOnMissingSubKey: false);
-        _logger.LogDebug("Deleted registry key: {Path}", issue.FullRegistryPath);
+        _logger.LogDebug("Deleted registry key: {Path}", targetPath);
         return true;
     }
 
@@ -846,9 +1010,17 @@ public sealed class RepairEngine
     {
         if (string.IsNullOrEmpty(issue.ValueName)) return DeleteRegistryKey(issue);
 
-        var (hive, subPath) = ParseRegistryPath(issue.FullRegistryPath);
-        if (hive == null || string.IsNullOrEmpty(subPath)) return false;
+        var targetPath = !string.IsNullOrWhiteSpace(issue.FullRegistryPath) ? issue.FullRegistryPath : issue.Path;
+        if (RegistryAnalyzer.IsProtectedPath(targetPath))
+        {
+            _logger.LogWarning("Refusing to delete value in protected registry path: {Path}", targetPath);
+            return false;
+        }
 
+        var (hive, subPath) = ParseRegistryPath(targetPath);
+        if (hive == null || string.IsNullOrWhiteSpace(subPath)) return false;
+
+        subPath = subPath.Trim().TrimEnd('\\', '/');
         using var key = hive.OpenSubKey(subPath, writable: true);
         if (key == null) return false;
 
@@ -861,10 +1033,16 @@ public sealed class RepairEngine
     {
         if (fullPath.StartsWith("HKEY_LOCAL_MACHINE\\", StringComparison.OrdinalIgnoreCase))
             return (Microsoft.Win32.Registry.LocalMachine, fullPath[19..]);
+        if (fullPath.StartsWith("HKLM\\", StringComparison.OrdinalIgnoreCase))
+            return (Microsoft.Win32.Registry.LocalMachine, fullPath[5..]);
         if (fullPath.StartsWith("HKEY_CURRENT_USER\\", StringComparison.OrdinalIgnoreCase))
             return (Microsoft.Win32.Registry.CurrentUser, fullPath[18..]);
+        if (fullPath.StartsWith("HKCU\\", StringComparison.OrdinalIgnoreCase))
+            return (Microsoft.Win32.Registry.CurrentUser, fullPath[5..]);
         if (fullPath.StartsWith("HKEY_CLASSES_ROOT\\", StringComparison.OrdinalIgnoreCase))
             return (Microsoft.Win32.Registry.ClassesRoot, fullPath[18..]);
+        if (fullPath.StartsWith("HKCR\\", StringComparison.OrdinalIgnoreCase))
+            return (Microsoft.Win32.Registry.ClassesRoot, fullPath[5..]);
         return (null, "");
     }
 
@@ -879,17 +1057,26 @@ public sealed class RepairEngine
         var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
         var backupFile = Path.Combine(_backupDirectory, $"registry_backup_{timestamp}.reg");
 
+        var masterContent = new System.Text.StringBuilder();
+        masterContent.AppendLine("Windows Registry Editor Version 5.00");
+        masterContent.AppendLine();
+
         try
         {
             // Export key sections that we might modify
             var keysToBackup = new[]
             {
                 @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
                 @"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
-                @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\SharedDLLs"
+                @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\SharedDLLs",
+                @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths",
+                @"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths",
+                @"HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
             };
 
-            // Use reg.exe to create proper .reg backup files
+            bool anyExported = false;
             foreach (var key in keysToBackup)
             {
                 var partFile = backupFile.Replace(".reg", $"_{key.Replace('\\', '_').Replace("HKLM_", "").Replace("HKCU_", "")}.reg");
@@ -904,11 +1091,42 @@ public sealed class RepairEngine
                     };
                     var proc = Process.Start(psi);
                     proc?.WaitForExit(5000);
+
+                    if (File.Exists(partFile))
+                    {
+                        anyExported = true;
+                        var lines = File.ReadAllLines(partFile);
+                        foreach (var line in lines)
+                        {
+                            if (line.StartsWith("Windows Registry Editor Version", StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            masterContent.AppendLine(line);
+                        }
+                        try { File.Delete(partFile); } catch { }
+                    }
                 }
                 catch { }
             }
+
+            if (!anyExported)
+            {
+                masterContent.AppendLine($"; Registry backup: {description} created at {DateTime.UtcNow:o}");
+            }
+
+            File.WriteAllText(backupFile, masterContent.ToString(), System.Text.Encoding.Unicode);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create registry backup file: {File}", backupFile);
+            try
+            {
+                if (!File.Exists(backupFile))
+                {
+                    File.WriteAllText(backupFile, "Windows Registry Editor Version 5.00\r\n; Fallback backup", System.Text.Encoding.Unicode);
+                }
+            }
+            catch { }
+        }
 
         // Write description file
         try
@@ -979,7 +1197,25 @@ public sealed class RegistryScanResult
 {
     public DateTimeOffset ScannedAt { get; set; }
     public TimeSpan ScanDuration { get; set; }
-    public int TotalIssues { get; set; }
+    public int TotalIssues
+    {
+        get
+        {
+            int computed = OrphanedSoftwareKeys.Count +
+                           BrokenFileAssociations.Count +
+                           InvalidPaths.Count +
+                           ObsoleteRunEntries.Count +
+                           ComActiveXOrphans.Count +
+                           SharedDllIssues.Count +
+                           TypeLibOrphans.Count +
+                           MuiCacheOrphans.Count +
+                           HkcuOrphanedKeys.Count +
+                           InstallerOrphans.Count;
+            return computed > 0 ? computed : _totalIssues;
+        }
+        set => _totalIssues = value;
+    }
+    private int _totalIssues;
 
     // Original categories
     public List<RegistryIssue> OrphanedSoftwareKeys { get; set; } = [];
@@ -1009,6 +1245,95 @@ public sealed class RegistryScanResult
         ["User Software Orphans"] = HkcuOrphanedKeys.Count,
         ["Installer References"] = InstallerOrphans.Count
     };
+
+    /// <summary>Calculated proportionate registry health score (0-100%).</summary>
+    public int HealthScore => CalculateHealthScore();
+
+    /// <summary>Count of issues confirmed safe to fix.</summary>
+    public int SafeToFixCount => RepairEngine.GetAllIssues(this).Count(i => i.IsSafeToFix);
+
+    /// <summary>Count of issues currently selected for repair.</summary>
+    public int SelectedCount => RepairEngine.GetSelectedIssues(this).Count;
+
+    /// <summary>
+    /// Calculates a proportionate, realistic registry health score (0-100%).
+    /// Severity-weighted and logarithmic to avoid dropping to 0% for benign leftovers.
+    /// </summary>
+    public int CalculateHealthScore()
+    {
+        if (TotalIssues == 0) return 100;
+
+        var all = RepairEngine.GetAllIssues(this);
+        int critical = all.Count(i => i.Severity == IssueSeverity.Critical);
+        int high = all.Count(i => i.Severity == IssueSeverity.High);
+        int medium = all.Count(i => i.Severity == IssueSeverity.Medium);
+        int low = all.Count(i => i.Severity == IssueSeverity.Low);
+
+        // Fallback when TotalIssues was assigned directly but category lists were not populated
+        if (all.Count == 0 && TotalIssues > 0)
+        {
+            low = TotalIssues;
+        }
+
+        // Deductions:
+        // Critical: 15 pts each
+        // High: 8 pts each
+        // Medium: 1 pt each (capped at 25 pts)
+        // Low: gentle square-root curve (capped at 20 pts)
+        double critPenalty = critical * 15.0;
+        double highPenalty = high * 8.0;
+        double medPenalty = Math.Min(25.0, medium * 1.0);
+        double lowPenalty = low > 0 ? Math.Min(20.0, Math.Sqrt(low) * 1.2) : 0.0;
+
+        int totalPenalty = (int)Math.Round(critPenalty + highPenalty + medPenalty + lowPenalty);
+        int score = Math.Clamp(100 - totalPenalty, 0, 100);
+
+        // If there are detected issues, score should not be 100%
+        if (score == 100 && TotalIssues > 0) score = 99;
+
+        // If all issues are benign Low/Medium severity, prevent scareware 0%
+        if (critical == 0 && high == 0 && score < 40)
+        {
+            score = 40;
+        }
+
+        return score;
+    }
+
+    /// <summary>
+    /// Formats an exact, mathematically transparent breakdown of issues across all categories.
+    /// Every non-zero category is included, ensuring the sum of category counts exactly equals TotalIssues.
+    /// </summary>
+    public string FormatBreakdown()
+    {
+        if (TotalIssues == 0)
+        {
+            return "✅ Registry hive integrity is 100%. 0 issues detected across all 10 categories.";
+        }
+
+        var categories = new (int count, string icon, string label)[]
+        {
+            (OrphanedSoftwareKeys.Count, "📦", "orphaned"),
+            (BrokenFileAssociations.Count, "🔗", "broken assoc"),
+            (InvalidPaths.Count, "📂", "invalid paths"),
+            (ObsoleteRunEntries.Count, "🚫", "obsolete startup"),
+            (ComActiveXOrphans.Count, "🧩", "COM/ActiveX"),
+            (SharedDllIssues.Count, "📚", "shared DLLs"),
+            (TypeLibOrphans.Count, "🏷", "type libs"),
+            (MuiCacheOrphans.Count, "🗂", "MUI cache"),
+            (HkcuOrphanedKeys.Count, "👤", "user orphans"),
+            (InstallerOrphans.Count, "💿", "installer refs")
+        };
+
+        var nonZero = categories.Where(c => c.count > 0).ToList();
+        if (nonZero.Count == 0)
+        {
+            return $"{TotalIssues} issues = {TotalIssues} total";
+        }
+
+        var breakdown = string.Join(" | ", nonZero.Select(c => $"{c.icon} {c.count} {c.label}"));
+        return $"{breakdown} = {TotalIssues} total";
+    }
 }
 
 public sealed record RegistryIssue
@@ -1020,6 +1345,7 @@ public sealed record RegistryIssue
     public string Description { get; init; } = "";
     public IssueSeverity Severity { get; init; }
     public bool IsSafeToFix { get; init; }
+    public bool IsSelected { get; set; } = true;
     public string SeverityIcon => Severity switch
     {
         IssueSeverity.Critical => "❌",

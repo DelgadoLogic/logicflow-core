@@ -9,10 +9,18 @@ _research/
 ## Build artifacts
 **/bin/
 **/obj/
+*.obj
+*.pdb
+*.ilk
 *.user
 *.suo
 .vs/
 TestResults/
+build*.log
+build_*.txt
+diag.host*.txt
+hash.txt
+temp_*.json
 
 ## Installers (generated — not source)
 Installer/*.exe
@@ -52,3 +60,11 @@ LOGICFLOW_MASTER_PLAN.md
 *master_plan*
 *revenue_strategy*
 *_CONFIDENTIAL*
+
+## Staging, archives & local test scratch
+Installer/staging/
+Installer/artifacts/
+Installer/_archive/
+Docs/_archive/
+TEST_INFRA.md
+TEST_READY.md

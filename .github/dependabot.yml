@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      nuget-dependencies:
+        patterns:
+          - "*"
     labels: ["dependencies", "dotnet"]
     commit-message:
       prefix: "deps"
@@ -14,6 +18,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     labels: ["dependencies", "ci"]
     commit-message:
       prefix: "ci"
