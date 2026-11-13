@@ -42,10 +42,34 @@ jobs:
             --output ./publish/dashboard `
             --self-contained false
 
+  # Node Backend Tests (Cloud Functions & Telemetry Ingest)
+  node-backend:
+    name: Node Functions & Telemetry Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      - name: Test Cloud Functions
+        run: |
+          npm --prefix functions ci
+          npm --prefix functions test
+
+      - name: Test Telemetry Ingest
+        run: |
+          npm --prefix Infrastructure/telemetry-ingest ci
+          npm --prefix Infrastructure/telemetry-ingest test
+
   # Release: Draft GitHub Release & publish sovereign update manifest
   release:
     name: Publish Release & Sovereign Manifest
-    needs: build
+    needs: [build, node-backend]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     environment: production

@@ -9,6 +9,11 @@ updates:
       nuget-dependencies:
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "Microsoft.Extensions.*"
+        versions: [">= 11.0.0"]
+      - dependency-name: "NAudio*"
+        versions: [">= 3.0.0"]
     labels: ["dependencies", "dotnet"]
     commit-message:
       prefix: "deps"
@@ -35,6 +40,14 @@ updates:
       npm-functions:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "firebase-admin"
+        versions: [">= 13.0.0"]
+      - dependency-name: "firebase-functions"
+        versions: [">= 6.0.0"]
     labels: ["dependencies", "functions"]
     commit-message:
       prefix: "deps(functions)"
